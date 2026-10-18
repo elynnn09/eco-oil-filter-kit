@@ -18,11 +18,18 @@
     pack: { name: 'Material pack', material: 'Cotton filter bag with coconut fibre and biochar', purpose: 'Holds the two natural filter media layers; replace after two weeks.' },
     cups: { name: 'Kitchen filter net cups', material: 'Fine nylon mesh with a polypropylene rim', purpose: 'Reusable cups shown in the kit box.' }
   };
-  const focusPoints = {
-    chamber: { x: 0.40, y: 0.53 }, topcap: { x: 0.46, y: 0.41 }, bottomcap: { x: 0.54, y: 0.42 },
-    inlet: { x: 0.64, y: 0.43 }, outlet: { x: 0.61, y: 0.47 }, pack: { x: 0.52, y: 0.54 },
-    cups: { x: 0.51, y: 0.68 }
+  // Hit areas are defined against the source photo, then mapped into the
+  // actual object-fit:contain image bounds at every viewport size.
+  const kitHotspots = {
+    chamber: { x: 0.205, y: 0.52, w: 0.18, h: 0.29 },
+    topcap: { x: 0.405, y: 0.425, w: 0.17, h: 0.12 },
+    bottomcap: { x: 0.58, y: 0.44, w: 0.17, h: 0.12 },
+    inlet: { x: 0.785, y: 0.45, w: 0.19, h: 0.12 },
+    outlet: { x: 0.735, y: 0.505, w: 0.15, h: 0.12 },
+    pack: { x: 0.56, y: 0.575, w: 0.57, h: 0.22 },
+    cups: { x: 0.54, y: 0.71, w: 0.66, h: 0.14 }
   };
+  const focusPoints = {};
   const $ = (id) => document.getElementById(id);
   const kitImage = $('kitImage');
   const kitStage = $('kitStage');
@@ -34,6 +41,33 @@
   let assembled = false;
   let replaced = false;
   let pointerStart = null;
+
+  function syncKitHotspots() {
+    if (!kitImage || !kitStage || !kitImage.naturalWidth || !kitImage.naturalHeight) return;
+    const stageRect = kitStage.getBoundingClientRect();
+    if (!stageRect.width || !stageRect.height) return;
+    const imageRatio = kitImage.naturalWidth / kitImage.naturalHeight;
+    const renderedWidth = Math.min(stageRect.width, stageRect.height * imageRatio);
+    const renderedHeight = Math.min(stageRect.height, stageRect.width / imageRatio);
+    const offsetX = (stageRect.width - renderedWidth) / 2;
+    const offsetY = (stageRect.height - renderedHeight) / 2;
+    for (const [id, region] of Object.entries(kitHotspots)) {
+      const button = document.querySelector(`#kitView .hotspot[data-part="${id}"]`);
+      if (!button) continue;
+      const centerX = offsetX + region.x * renderedWidth;
+      const centerY = offsetY + region.y * renderedHeight;
+      button.style.left = `${centerX}px`;
+      button.style.top = `${centerY}px`;
+      button.style.width = `${Math.max(26, region.w * renderedWidth)}px`;
+      button.style.height = `${Math.max(26, region.h * renderedHeight)}px`;
+      button.style.transform = 'translate(-50%, -50%)';
+      focusPoints[id] = { x: centerX / stageRect.width, y: centerY / stageRect.height };
+    }
+  }
+  if (kitImage) {
+    kitImage.addEventListener('load', syncKitHotspots);
+    if (kitImage.complete) syncKitHotspots();
+  }
 
   function paintDetails(id, source = 'kit') {
     const part = parts[id];
@@ -116,7 +150,7 @@
     const artwork = $('kitArtwork');
     if (!kitImage || !kitStage || !artwork) return;
     const focus = focusPoints[id] || focusPoints.chamber;
-    const scale = window.matchMedia('(max-width: 600px)').matches ? 1.3 : 0.91;
+    const scale = 1.3;
     const bounds = kitStage.getBoundingClientRect();
     const tx = bounds.width * (0.5 - focus.x) * scale;
     const ty = bounds.height * (0.5 - focus.y) * scale;
@@ -158,8 +192,15 @@
   });
 
   window.addEventListener('resize', () => {
+    syncKitHotspots();
     if (kitFocusedId) positionKitDetails(kitFocusedId);
   });
+  if ('ResizeObserver' in window && kitStage) {
+    new ResizeObserver(() => {
+      syncKitHotspots();
+      if (kitFocusedId) positionKitDetails(kitFocusedId);
+    }).observe(kitStage);
+  }
 
   const kitTourParts = ['chamber', 'topcap', 'bottomcap', 'inlet', 'outlet', 'pack', 'cups'];
   let kitTourActive = false;
