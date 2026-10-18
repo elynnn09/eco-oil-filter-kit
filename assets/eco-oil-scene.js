@@ -596,17 +596,27 @@
     timeline.to(productRoot.position, { x: 0.45, y: -0.92, duration: 1.28, ease: 'power3.inOut' });
     timeline.to(camera.position, { x: installCameraPosition.x, y: installCameraPosition.y, z: installCameraPosition.z, duration: 1.28, ease: 'power3.inOut', onUpdate: () => camera.lookAt(cameraTarget) }, '<');
     timeline.to(cameraTarget, { x: installCameraTarget.x, y: installCameraTarget.y, z: installCameraTarget.z, duration: 1.28, ease: 'power3.inOut', onUpdate: () => camera.lookAt(cameraTarget) }, '<');
+    const tankBottom = -1.23;
+    const fullWaterHeight = 1.9;
+    const fullOilThickness = 0.105;
+    const syncFillGeometry = () => {
+      const fill = water.scale.y;
+      const waterTop = tankBottom + fullWaterHeight * fill;
+      water.position.y = tankBottom + (fullWaterHeight * fill) / 2;
+      oil.scale.y = Math.max(0.001, fill);
+      oil.position.y = waterTop + (fullOilThickness * oil.scale.y) / 2;
+      oilSurface.position.y = waterTop + fullOilThickness * oil.scale.y + 0.006;
+    };
     timeline.call(() => {
       updateStatus('Water-oil mixture flowing slowly into the tank');
       water.visible = true;
       water.scale.y = 0.001;
-      water.position.y = 0.669;
       oil.visible = true;
-      oilMat.opacity = 0;
-      oil.position.y = OIL_START_Y;
+      oil.scale.y = 0.001;
+      oilMat.opacity = 0.94;
       oilSurface.visible = true;
       oilSurfaceMat.opacity = 0;
-      oilSurface.position.y = OIL_START_Y + 0.06;
+      syncFillGeometry();
       bubbleMat.opacity = 0;
       bubbles.forEach((bubble) => { bubble.visible = true; });
       inletFlow.visible = true;
@@ -620,11 +630,9 @@
     });
     timeline.to(inletFlowMat, { opacity: 0.82, duration: 1.25, ease: 'power1.inOut' });
     timeline.to(oilFlowMat, { opacity: 0.94, duration: 1.5, ease: 'power1.inOut' }, '<+=0.35');
-    timeline.to(water.scale, { y: 1, duration: 7.2, ease: 'none', onUpdate: () => updateProgress(84 + Math.round(water.scale.y * 8)) }, '<');
-    timeline.to(water.position, { y: -0.28, duration: 7.2, ease: 'none' }, '<');
+    timeline.to(water.scale, { y: 1, duration: 7.2, ease: 'none', onUpdate: () => { syncFillGeometry(); updateProgress(84 + Math.round(water.scale.y * 8)); } }, '<');
+    timeline.to(oilSurfaceMat, { opacity: 0.94, duration: 7.2, ease: 'none' }, '<');
     timeline.to(bubbleMat, { opacity: 0.76, duration: 3.4, ease: 'power1.out' }, '<+=1.2');
-    timeline.to(oilMat, { opacity: 0.94, duration: 2.8, ease: 'power1.inOut' }, '<+=2.4');
-    timeline.to(oilSurfaceMat, { opacity: 0.94, duration: 2.8, ease: 'power1.inOut' }, '<');
     timeline.call(() => {
       updateStatus('Filtered water reaches the lower outlet and drains underground');
       outletFlow.visible = true;
