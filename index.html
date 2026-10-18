@@ -62,6 +62,16 @@
 .zoom-control button{color:#202923}
 .zoom-control button:hover{background:#A5D6A7;color:#202923}
 .three-stage{background:#A5D6A7}
+/* About landing: remove the green panel and align the brand and copy on the left. */
+.about-hero{display:flex;align-items:center;justify-content:flex-start;background:#f5f5ef;padding:clamp(36px,7vw,96px)}
+.about-backdrop img{filter:blur(8px);opacity:.58}
+.about-veil{background:#f5f5ef55}
+.about-content{width:min(780px,100%);margin-left:clamp(0px,5vw,72px);align-items:flex-start;text-align:left;color:#202923;padding:clamp(24px,4vw,58px);border:0;border-radius:0;background:transparent;box-shadow:none;backdrop-filter:none}
+.about-logo{width:clamp(280px,40vw,490px)}
+.about-kicker{margin:34px 0 14px;color:#202923}
+.about-copy{max-width:720px;text-align:left;color:#202923;font-size:clamp(18px,2vw,25px);line-height:1.55}
+.about-cta{align-self:flex-start;margin-top:30px;border-color:#202923;background:#f6f5eb;color:#202923}
+@media(max-width:600px){.about-hero{min-height:92svh;padding:30px 18px}.about-content{margin-left:0;padding:24px 4px;max-width:100%}.about-logo{width:min(310px,88vw)}.about-kicker{margin:25px 0 12px}.about-copy{font-size:17px;line-height:1.55}.about-cta{margin-top:24px}}
 </style>
 </head>
 <body>
