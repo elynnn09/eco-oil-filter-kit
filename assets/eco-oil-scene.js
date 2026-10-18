@@ -32,7 +32,6 @@
   let cameraTween = null;
   let replaceTimeline = null;
   let assemblyTimeline = null;
-  let oilTween = null;
   let assembled = false;
   let replaced = false;
   let pointerStart = null;
@@ -405,17 +404,6 @@
   let sparePack = freshPack;
   let spareCord = freshCord;
 
-  function setOilHeight(value) {
-    const amount = Number(value) / 100;
-    const y = OIL_START_Y + (OIL_BIOCHAR_Y - OIL_START_Y) * amount;
-    if (oilTween) oilTween.kill();
-    oil.position.y = y;
-    oilSurface.position.y = y + 0.06;
-    if ($('oilPosition')) $('oilPosition').value = String(Number(value));
-    if ($('oilPositionValue')) $('oilPositionValue').textContent = amount >= 0.995 ? 'At biochar' : `${Math.round(amount * 100)}% lower`;
-    if (assembled && $('motionStatus')) updateStatus(amount >= 0.995 ? 'Oil layer aligned with the biochar' : 'Oil layer position adjusted');
-  }
-
   function updateCord(cord, pack, hand, handActive) {
     const start = new THREE.Vector3(pack.position.x, pack.position.y + 0.67, pack.position.z + 0.02);
     const end = handActive ? new THREE.Vector3(hand.position.x, hand.position.y - 0.18, hand.position.z) : new THREE.Vector3(start.x, 1.62, start.z);
@@ -455,7 +443,9 @@
     assembled = false;
     installed = false;
     productRoot.rotation.set(0, 0, 0);
-    setOilHeight(0);
+    oil.scale.y = 1;
+    oil.position.y = OIL_START_Y;
+    oilSurface.position.y = OIL_START_Y + 0.06;
     water.visible = false;
     water.scale.y = 1;
     water.position.y = -0.28;
@@ -556,17 +546,13 @@
     setZoom(50);
     $('replaceButton').disabled = true;
     $('replayButton').disabled = true;
-    $('oilPosition').disabled = true;
-    $('oilBiocharButton').disabled = true;
     updateStatus('Ready · Parts will assemble one by one');
     updateProgress(0);
     const timeline = gsap.timeline({ onComplete() {
       assembled = true;
       $('replaceButton').disabled = false;
       $('replayButton').disabled = false;
-      $('oilPosition').disabled = false;
-      $('oilBiocharButton').disabled = false;
-      updateStatus(installed ? 'Running · Water-oil mix in · Filtered water out' : 'Assembly complete · Ready to use');
+      updateStatus(installed ? 'Running · Grease captured · Clean water draining underground' : 'Assembly complete · Ready to use');
       updateProgress(100);
       paintDetails(selectedId);
       if (installed) setAutoRotation(false);
@@ -599,10 +585,13 @@
     const tankBottom = -1.23;
     const fullWaterHeight = 1.9;
     const fullOilThickness = 0.105;
+    const syncWaterGeometry = () => {
+      water.position.y = tankBottom + (fullWaterHeight * water.scale.y) / 2;
+    };
     const syncFillGeometry = () => {
       const fill = water.scale.y;
       const waterTop = tankBottom + fullWaterHeight * fill;
-      water.position.y = tankBottom + (fullWaterHeight * fill) / 2;
+      syncWaterGeometry();
       oil.scale.y = Math.max(0.001, fill);
       oil.position.y = waterTop + (fullOilThickness * oil.scale.y) / 2;
       oilSurface.position.y = waterTop + fullOilThickness * oil.scale.y + 0.006;
@@ -633,8 +622,12 @@
     timeline.to(water.scale, { y: 1, duration: 7.2, ease: 'none', onUpdate: () => { syncFillGeometry(); updateProgress(84 + Math.round(water.scale.y * 8)); } }, '<');
     timeline.to(oilSurfaceMat, { opacity: 0.94, duration: 7.2, ease: 'none' }, '<');
     timeline.to(bubbleMat, { opacity: 0.76, duration: 3.4, ease: 'power1.out' }, '<+=1.2');
+    timeline.call(() => updateStatus('Oil is drawn through the material pack and captured by the biochar'));
+    timeline.to(oil.position, { y: OIL_BIOCHAR_Y, duration: 3.6, ease: 'power1.inOut', onUpdate: () => { oilSurface.position.y = oil.position.y + 0.06; } });
+    timeline.to(oilMat, { opacity: 0, duration: 1.1, ease: 'power1.out' }, '-=0.35');
+    timeline.to(oilSurfaceMat, { opacity: 0, duration: 1.1, ease: 'power1.out' }, '<');
     timeline.call(() => {
-      updateStatus('Filtered water reaches the lower outlet and drains underground');
+      updateStatus('Clean water flows through the lower PVC outlet');
       outletFlow.visible = true;
       outletDrops.forEach((drop) => { drop.visible = true; });
       undergroundFlow.visible = true;
@@ -644,7 +637,9 @@
     timeline.to(outletDrops.map((drop) => drop.material), { opacity: 0.96, duration: 0.65, ease: 'power1.out' }, '<');
     timeline.to(undergroundFlowMat, { opacity: 0.84, duration: 0.8, ease: 'power1.out' }, '<');
     timeline.to(undergroundDrops.map((drop) => drop.material), { opacity: 0.96, duration: 0.65, ease: 'power1.out' }, '<');
-    timeline.call(() => { updateStatus('Running · Water-oil mix in · Filtered water out'); updateProgress(100); });
+    timeline.call(() => updateStatus('Water and oil levels are gradually decreasing as filtered water drains'));
+    timeline.to(water.scale, { y: 0.28, duration: 7.2, ease: 'none', onUpdate: () => { syncWaterGeometry(); updateProgress(92 + Math.round((1 - water.scale.y) * 8)); } });
+    timeline.call(() => updateStatus('Running · Grease captured · Clean water draining underground'));
   }
 
   function animateReplacement() {
@@ -668,14 +663,10 @@
     replaced = false;
     $('replaceButton').disabled = true;
     $('replayButton').disabled = true;
-    $('oilPosition').disabled = true;
-    $('oilBiocharButton').disabled = true;
     const timeline = gsap.timeline({ onComplete() {
       replaced = true;
       $('replaceButton').disabled = false;
       $('replayButton').disabled = false;
-      $('oilPosition').disabled = true;
-      $('oilBiocharButton').disabled = true;
       updateStatus('Fresh material pack installed · Tank empty');
       updateProgress(100);
     } });
@@ -702,9 +693,8 @@
     timeline.to(oil.position, { y: -0.22, duration: 1.05, ease: 'power2.inOut' }, '<');
     timeline.to(oilSurface.position, { y: -0.16, duration: 1.05, ease: 'power2.inOut' }, '<');
     timeline.call(() => {
-      setOilHeight(60);
-      bubbles.forEach((bubble) => { bubble.visible = bubble.position.y < -0.33; });
-      updateStatus('Water level lowered to halfway · Oil stays on the surface');
+      bubbles.forEach((bubble) => { bubble.visible = false; });
+      updateStatus('Tank empty · Ready for the fresh material pack');
     });
     timeline.to({}, { duration: 0.9 });
     timeline.call(() => {
@@ -746,28 +736,6 @@
   });
   $('replayButton').addEventListener('click', () => { assembled = false; replaced = false; animateAssembly(); });
   $('replaceButton').addEventListener('click', animateReplacement);
-  $('oilPosition').addEventListener('input', () => setOilHeight($('oilPosition').value));
-  $('oilBiocharButton').addEventListener('click', () => {
-    if (oilTween) oilTween.kill();
-    updateStatus('Moving the oil layer down to the biochar');
-    oilTween = gsap.to(oil.position, {
-      y: OIL_BIOCHAR_Y,
-      duration: reducedMotion ? 0.15 : 3.2,
-      ease: 'power2.inOut',
-      onUpdate() {
-        oilSurface.position.y = oil.position.y + 0.06;
-        const amount = (OIL_START_Y - oil.position.y) / (OIL_START_Y - OIL_BIOCHAR_Y);
-        $('oilPosition').value = String(Math.round(amount * 100));
-        $('oilPositionValue').textContent = amount >= 0.995 ? 'At biochar' : `${Math.round(amount * 100)}% lower`;
-      },
-      onComplete() {
-        oilSurface.position.y = OIL_BIOCHAR_Y + 0.06;
-        $('oilPosition').value = '100';
-        $('oilPositionValue').textContent = 'At biochar';
-        updateStatus('Oil layer aligned with the biochar');
-      }
-    });
-  });
   $('backButton').addEventListener('click', () => {
     $('productView').hidden = true;
     $('kitView').hidden = false;
