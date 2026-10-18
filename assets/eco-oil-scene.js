@@ -193,12 +193,12 @@
 
   window.addEventListener('resize', () => {
     syncKitHotspots();
-    if (kitFocusedId) positionKitDetails(kitFocusedId);
+    if (kitFocusedId) focusBoxPart(kitFocusedId);
   });
   if ('ResizeObserver' in window && kitStage) {
     new ResizeObserver(() => {
       syncKitHotspots();
-      if (kitFocusedId) positionKitDetails(kitFocusedId);
+      if (kitFocusedId) focusBoxPart(kitFocusedId);
     }).observe(kitStage);
   }
 
