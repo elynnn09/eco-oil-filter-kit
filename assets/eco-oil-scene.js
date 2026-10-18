@@ -522,6 +522,11 @@
   function animateReplacement() {
     if (!assembled || replaceTimeline && replaceTimeline.isActive()) return;
     if (rotationTween) rotationTween.pause();
+    // Replacement is a maintenance state: stop incoming mixed flow before opening the tank.
+    inletFlow.visible = false;
+    inletFlowMat.opacity = 0;
+    oilFlowMat.opacity = 0;
+    oilFlowDrops.forEach((drop) => { drop.visible = false; });
     const usedPack = activePack;
     const usedCord = activeCord;
     const newPack = sparePack;
