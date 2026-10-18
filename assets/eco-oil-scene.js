@@ -298,14 +298,20 @@
   const inletFlowMat = new THREE.MeshPhysicalMaterial({ color: '#35b7e8', roughness: 0.12, transparent: true, opacity: 0, transmission: 0.04, side: THREE.DoubleSide, depthWrite: false });
   const inletFlow = addMesh(inlet, new THREE.TubeGeometry(flowCurve, 64, 0.087, 16, false), inletFlowMat, 'inlet');
   inletFlow.visible = false;
+  const tankFlowPoints = [[-0.63, 0.38, 0.045], [-0.43, 0.32, 0.045], [-0.22, 0.12, 0.045], [-0.06, -0.18, 0.045], [0.02, -0.52, 0.045], [0.02, -0.9, 0.045], [0.02, -1.32, 0.045]];
+  const tankFlowCurve = new THREE.CatmullRomCurve3(tankFlowPoints.map((point) => new THREE.Vector3(...point)), false, 'centripetal');
+  const tankFlowMat = new THREE.MeshPhysicalMaterial({ color: '#79d5e8', roughness: 0.13, transparent: true, opacity: 0, transmission: 0.04, side: THREE.DoubleSide, depthWrite: false });
+  const tankFlow = addMesh(chamber, new THREE.TubeGeometry(tankFlowCurve, 48, 0.073, 12, false), tankFlowMat, 'chamber');
+  tankFlow.visible = false;
+  const mixedFlowPoints = [...inletPoints, [-0.43, 0.32, 0.045], [-0.22, 0.12, 0.045], [-0.06, -0.18, 0.045], [0.02, -0.52, 0.045], [0.02, -0.9, 0.045]];
+  const mixedFlowCurve = new THREE.CatmullRomCurve3(mixedFlowPoints.map((point) => new THREE.Vector3(point[0], point[1], point[2] + 0.035)), false, 'centripetal');
   const oilFlowMat = new THREE.MeshStandardMaterial({ color: '#ffc22f', roughness: 0.14, metalness: 0.03, transparent: true, opacity: 0, depthWrite: false });
   const oilFlowDrops = [];
-  for (let i = 0; i < 5; i++) {
-    const drop = addMesh(inlet, new THREE.SphereGeometry(0.047 + (i % 2) * 0.008, 14, 10), oilFlowMat, 'inlet');
+  for (let i = 0; i < 7; i++) {
+    const drop = addMesh(inlet, new THREE.SphereGeometry(0.031 + (i % 2) * 0.009, 12, 10), oilFlowMat, 'inlet');
     drop.visible = false;
     oilFlowDrops.push(drop);
-  }
-  const outletFlowCurve = new THREE.CatmullRomCurve3(outletPoints.map((point) => new THREE.Vector3(point[0], point[1], point[2] + 0.035)), false, 'centripetal');
+  }  const outletFlowCurve = new THREE.CatmullRomCurve3(outletPoints.map((point) => new THREE.Vector3(point[0], point[1], point[2] + 0.035)), false, 'centripetal');
   const outletFlowMat = new THREE.MeshPhysicalMaterial({ color: '#9fe6f2', roughness: 0.1, transparent: true, opacity: 0, transmission: 0.04, side: THREE.DoubleSide, depthWrite: false });
   const outletFlow = addMesh(outlet, new THREE.TubeGeometry(outletFlowCurve, 48, 0.074, 14, false), outletFlowMat, 'outlet');
   outletFlow.visible = false;
@@ -456,6 +462,8 @@
     oilSurfaceMat.opacity = 0.94;
     inletFlow.visible = false;
     inletFlowMat.opacity = 0;
+    tankFlow.visible = false;
+    tankFlowMat.opacity = 0;
     oilFlowDrops.forEach((drop) => { drop.visible = false; });
     oilFlowMat.opacity = 0;
     outletFlow.visible = false;
@@ -584,31 +592,21 @@
     timeline.to(cameraTarget, { x: installCameraTarget.x, y: installCameraTarget.y, z: installCameraTarget.z, duration: 1.28, ease: 'power3.inOut', onUpdate: () => camera.lookAt(cameraTarget) }, '<');
     const tankBottom = -1.23;
     const fullWaterHeight = 1.9;
-    const fullOilThickness = 0.105;
     const syncWaterGeometry = () => {
       water.position.y = tankBottom + (fullWaterHeight * water.scale.y) / 2;
     };
-    const syncFillGeometry = () => {
-      const fill = water.scale.y;
-      const waterTop = tankBottom + fullWaterHeight * fill;
-      syncWaterGeometry();
-      oil.scale.y = Math.max(0.001, fill);
-      oil.position.y = waterTop + (fullOilThickness * oil.scale.y) / 2;
-      oilSurface.position.y = waterTop + fullOilThickness * oil.scale.y + 0.006;
-    };
     timeline.call(() => {
-      updateStatus('Water-oil mixture flowing slowly into the tank');
+      updateStatus('Water and oil enter through the upper PVC and flow down through the tank');
       water.visible = true;
       water.scale.y = 0.001;
-      oil.visible = true;
-      oil.scale.y = 0.001;
+      oil.visible = false;
+      oilSurface.visible = false;
       oilMat.opacity = 0.94;
-      oilSurface.visible = true;
       oilSurfaceMat.opacity = 0;
-      syncFillGeometry();
       bubbleMat.opacity = 0;
       bubbles.forEach((bubble) => { bubble.visible = true; });
       inletFlow.visible = true;
+      tankFlow.visible = true;
       oilFlowDrops.forEach((drop) => { drop.visible = true; });
       outletFlow.visible = false;
       outletFlowMat.opacity = 0;
@@ -616,30 +614,28 @@
       undergroundFlow.visible = false;
       undergroundFlowMat.opacity = 0;
       undergroundDrops.forEach((drop) => { drop.visible = false; });
+      syncWaterGeometry();
     });
     timeline.to(inletFlowMat, { opacity: 0.82, duration: 1.25, ease: 'power1.inOut' });
-    timeline.to(oilFlowMat, { opacity: 0.94, duration: 1.5, ease: 'power1.inOut' }, '<+=0.35');
-    timeline.to(water.scale, { y: 1, duration: 7.2, ease: 'none', onUpdate: () => { syncFillGeometry(); updateProgress(84 + Math.round(water.scale.y * 8)); } }, '<');
-    timeline.to(oilSurfaceMat, { opacity: 0.94, duration: 7.2, ease: 'none' }, '<');
+    timeline.to(tankFlowMat, { opacity: 0.62, duration: 1.35, ease: 'power1.inOut' }, '<+=0.3');
+    timeline.to(oilFlowMat, { opacity: 0.94, duration: 1.5, ease: 'power1.inOut' }, '<');
+    timeline.to(water.scale, { y: 0.62, duration: 7.2, ease: 'none', onUpdate: () => { syncWaterGeometry(); updateProgress(84 + Math.round(water.scale.y * 8)); } }, '<');
     timeline.to(bubbleMat, { opacity: 0.76, duration: 3.4, ease: 'power1.out' }, '<+=1.2');
-    timeline.call(() => updateStatus('Oil is drawn through the material pack and captured by the biochar'));
-    timeline.to(oil.position, { y: OIL_BIOCHAR_Y, duration: 3.6, ease: 'power1.inOut', onUpdate: () => { oilSurface.position.y = oil.position.y + 0.06; } });
-    timeline.to(oilMat, { opacity: 0, duration: 1.1, ease: 'power1.out' }, '-=0.35');
-    timeline.to(oilSurfaceMat, { opacity: 0, duration: 1.1, ease: 'power1.out' }, '<');
     timeline.call(() => {
-      updateStatus('Clean water flows through the lower PVC outlet');
+      updateStatus('Grease droplets are gradually captured by the material pack');
       outletFlow.visible = true;
       outletDrops.forEach((drop) => { drop.visible = true; });
       undergroundFlow.visible = true;
       undergroundDrops.forEach((drop) => { drop.visible = true; });
-    });
-    timeline.to(outletFlowMat, { opacity: 0.92, duration: 0.8, ease: 'power1.out' });
+    }, null, '<+=2.0');
+    timeline.to(outletFlowMat, { opacity: 0.92, duration: 0.8, ease: 'power1.out' }, '<');
     timeline.to(outletDrops.map((drop) => drop.material), { opacity: 0.96, duration: 0.65, ease: 'power1.out' }, '<');
     timeline.to(undergroundFlowMat, { opacity: 0.84, duration: 0.8, ease: 'power1.out' }, '<');
     timeline.to(undergroundDrops.map((drop) => drop.material), { opacity: 0.96, duration: 0.65, ease: 'power1.out' }, '<');
-    timeline.call(() => updateStatus('Water and oil levels are gradually decreasing as filtered water drains'));
+    timeline.to({}, { duration: 4.4 });
+    timeline.call(() => updateStatus('Filtered water continues down the lower PVC while the tank level slowly falls'));
     timeline.to(water.scale, { y: 0.28, duration: 7.2, ease: 'none', onUpdate: () => { syncWaterGeometry(); updateProgress(92 + Math.round((1 - water.scale.y) * 8)); } });
-    timeline.call(() => updateStatus('Running · Grease captured · Clean water draining underground'));
+    timeline.call(() => updateStatus('Running · Grease captured in the pack · Water draining underground'));
   }
 
   function animateReplacement() {
@@ -648,6 +644,8 @@
     // Replacement is a maintenance state: stop incoming mixed flow before opening the tank.
     inletFlow.visible = false;
     inletFlowMat.opacity = 0;
+    tankFlow.visible = false;
+    tankFlowMat.opacity = 0;
     oilFlowMat.opacity = 0;
     oilFlowDrops.forEach((drop) => { drop.visible = false; });
     outletFlow.visible = false;
@@ -836,7 +834,7 @@
       const flowTime = flowClock.getElapsedTime();
       oilFlowDrops.forEach((drop, index) => {
         const progress = (flowTime * 0.18 + index / oilFlowDrops.length) % 1;
-        drop.position.copy(flowCurve.getPointAt(progress));
+        drop.position.copy(mixedFlowCurve.getPointAt(progress));
       });
       outletDrops.forEach((drop, index) => {
         const progress = (flowTime * 0.24 + index / outletDrops.length) % 1;
