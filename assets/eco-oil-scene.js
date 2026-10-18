@@ -16,13 +16,12 @@
     inlet: { name: 'PVC inlet elbow', material: 'Clear rigid PVC', purpose: 'Carries water into the chamber.' },
     outlet: { name: 'PVC outlet elbow', material: 'Clear rigid PVC', purpose: 'Routes filtered water out to the drain.' },
     pack: { name: 'Material pack', material: 'Cotton filter bag with coconut fibre and biochar', purpose: 'Holds the two natural filter media layers; replace after two weeks.' },
-    cord: { name: 'Cotton drawstring', material: 'Braided cotton cord', purpose: 'Pull the material pack up and lower a fresh pack into the chamber.' },
     cups: { name: 'Kitchen filter net cups', material: 'Fine nylon mesh with a polypropylene rim', purpose: 'Reusable cups shown in the kit box.' }
   };
   const focusPoints = {
-    chamber: { x: 0.26, y: 0.45 }, topcap: { x: 0.43, y: 0.24 }, bottomcap: { x: 0.59, y: 0.27 },
-    inlet: { x: 0.75, y: 0.27 }, outlet: { x: 0.77, y: 0.38 }, pack: { x: 0.58, y: 0.51 },
-    cord: { x: 0.70, y: 0.49 }, cups: { x: 0.55, y: 0.78 }
+    chamber: { x: 0.40, y: 0.53 }, topcap: { x: 0.46, y: 0.41 }, bottomcap: { x: 0.54, y: 0.42 },
+    inlet: { x: 0.64, y: 0.43 }, outlet: { x: 0.61, y: 0.47 }, pack: { x: 0.52, y: 0.54 },
+    cups: { x: 0.51, y: 0.68 }
   };
   const $ = (id) => document.getElementById(id);
   const kitImage = $('kitImage');
@@ -36,21 +35,30 @@
   let replaced = false;
   let pointerStart = null;
 
-  function paintDetails(id) {
+  function paintDetails(id, source = 'kit') {
     const part = parts[id];
     if (!part) return;
     selectedId = id;
     if ($('detailContent')) $('detailContent').hidden = false;
-    if ($('kitWorkspace')) {
-      $('kitWorkspace').classList.remove('no-selection');
-      $('kitWorkspace').classList.add('has-selection');
+    if (source === 'kit') {
+      if ($('kitWorkspace')) {
+        $('kitWorkspace').classList.remove('no-selection');
+        $('kitWorkspace').classList.add('has-selection');
+      }
+      if ($('detailsCard')) $('detailsCard').hidden = false;
+    } else {
+      if ($('detailsCard')) $('detailsCard').hidden = true;
+      if ($('detailContent')) $('detailContent').hidden = true;
+      if ($('kitWorkspace')) {
+        $('kitWorkspace').classList.remove('has-selection');
+        $('kitWorkspace').classList.add('no-selection');
+      }
     }
-    if ($('detailsCard')) $('detailsCard').hidden = false;
     const showModelDetails = assembled && id !== 'cups' && Boolean(modelParts[id]);
     if ($('modelDetails')) $('modelDetails').hidden = !showModelDetails;
     if ($('modelDetailContent')) $('modelDetailContent').hidden = !showModelDetails;
     document.querySelector('.product-layout')?.classList.toggle('has-model-selection', showModelDetails);
-    document.querySelectorAll('[data-part]').forEach((button) => {
+  document.querySelectorAll('[data-part]').forEach((button) => {
       button.classList.toggle('is-selected', button.dataset.part === id);
       button.setAttribute('aria-pressed', button.dataset.part === id ? 'true' : 'false');
     });
@@ -61,6 +69,48 @@
     if (assembled && id !== 'cups' && modelParts[id] && camera) focusModelPart(id);
   }
 
+  function positionKitDetails(id) {
+    const workspace = $('kitWorkspace');
+    const stageBounds = $('kitStage');
+    const card = $('detailsCard');
+    const target = Array.from(document.querySelectorAll('#kitView .hotspot')).find((node) => node.dataset.part === id);
+    if (!workspace || !stageBounds || !card || card.hidden || !target) return;
+
+    const workspaceRect = workspace.getBoundingClientRect();
+    const stageRect = stageBounds.getBoundingClientRect();
+    const cardWidth = card.offsetWidth || 220;
+    const cardHeight = card.offsetHeight || 150;
+    // Focus zoom animates the artwork and hotspot toward stage center; anchor to
+    // that final position so the card doesn't stay stranded at its pre-zoom spot.
+    const anchorX = stageRect.left + stageRect.width / 2;
+    const anchorY = stageRect.top + stageRect.height / 2;
+    const objectClearance = Math.min(stageRect.width * 0.055, 70);
+    const gap = 10;
+    const stageLeft = stageRect.left - workspaceRect.left + 12;
+    const stageRight = stageRect.right - workspaceRect.left - cardWidth - 12;
+    const rightSide = anchorX - workspaceRect.left + objectClearance + gap;
+    const leftSide = anchorX - workspaceRect.left - objectClearance - gap - cardWidth;
+    let left;
+    let top;
+
+    if (rightSide <= stageRight) {
+      left = rightSide;
+      top = anchorY - workspaceRect.top - cardHeight / 2;
+    } else if (leftSide >= stageLeft) {
+      left = leftSide;
+      top = anchorY - workspaceRect.top - cardHeight / 2;
+    } else {
+      // Compact viewports cannot fit a card beside the focused part without covering it.
+      left = Math.max(stageLeft, Math.min((stageRect.left - workspaceRect.left) + (stageRect.width - cardWidth) / 2, stageRight));
+      top = stageRect.bottom - workspaceRect.top + 8;
+    }
+
+    const stageTop = stageRect.top - workspaceRect.top + 8;
+    const stageBottom = stageRect.bottom - workspaceRect.top - cardHeight - 8;
+    if (top <= stageBottom) top = Math.max(stageTop, top);
+    card.style.left = `${left}px`;
+    card.style.top = `${top}px`;
+  }
   function focusBoxPart(id) {
     const artwork = $('kitArtwork');
     if (!kitImage || !kitStage || !artwork) return;
@@ -72,6 +122,7 @@
     artwork.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
     artwork.style.transformOrigin = 'center center';
     if ($('kitFocusHint')) $('kitFocusHint').textContent = `Focused on ${parts[id].name}`;
+    requestAnimationFrame(() => positionKitDetails(id));
   }
 
   function clearKitFocus() {
@@ -94,16 +145,61 @@
   document.querySelectorAll('[data-part]').forEach((button) => {
     button.addEventListener('click', () => {
       const inKit = Boolean(button.closest('#kitView'));
+      if (inKit && kitTourActive) endKitTour();
       if (inKit && kitFocusedId === button.dataset.part) {
         clearKitFocus();
         return;
       }
       if (inKit) kitFocusedId = button.dataset.part;
-      paintDetails(button.dataset.part);
+      paintDetails(button.dataset.part, inKit ? 'kit' : 'model');
       if (inKit) focusBoxPart(button.dataset.part);
     });
   });
 
+  window.addEventListener('resize', () => {
+    if (kitFocusedId) positionKitDetails(kitFocusedId);
+  });
+
+  const kitTourParts = ['chamber', 'topcap', 'bottomcap', 'inlet', 'outlet', 'pack', 'cups'];
+  let kitTourActive = false;
+  let kitTourIndex = 0;
+  let kitTourStarted = false;
+  let kitTourTimer = 0;
+  function showKitTourPart() {
+    const id = kitTourParts[kitTourIndex];
+    kitFocusedId = id;
+    paintDetails(id);
+    focusBoxPart(id);
+    $('kitTourCount').textContent = `${String(kitTourIndex + 1).padStart(2, '0')} / ${String(kitTourParts.length).padStart(2, '0')}`;
+    $('kitTourProgress').style.transform = `scaleX(${(kitTourIndex + 1) / kitTourParts.length})`;
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      $('detailsCard').animate([{ opacity: 0.72, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 190, easing: 'cubic-bezier(0.23,1,0.32,1)' });
+    }
+  }
+  function endKitTour() {
+    window.clearTimeout(kitTourTimer);
+    kitTourActive = false;
+    $('kitTourControls').hidden = true;
+    clearKitFocus();
+  }
+  function playNextKitTourPart() {
+    showKitTourPart();
+    if (kitTourIndex === kitTourParts.length - 1) {
+      kitTourTimer = window.setTimeout(endKitTour, 2100);
+      return;
+    }
+    kitTourTimer = window.setTimeout(() => { kitTourIndex += 1; playNextKitTourPart(); }, 2100);
+  }
+  function startKitTour() {
+    if (kitTourStarted) return;
+    kitTourStarted = true;
+    kitTourActive = true;
+    kitTourIndex = 0;
+    $('kitTourControls').hidden = false;
+    playNextKitTourPart();
+  }
+  document.addEventListener('eco-oil:kit-opened', startKitTour);
+  $('kitTourSkip').addEventListener('click', endKitTour);
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const lowPowerMode = window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(max-width: 768px)').matches;
   const scene = new THREE.Scene();
@@ -177,13 +273,13 @@
   // The drain stem from the sink joins the filter's raised upper PVC inlet.
   const sinkDrainCurve = new THREE.CatmullRomCurve3([
     new THREE.Vector3(-1.62, 2.86, 0), new THREE.Vector3(-1.62, 2.48, 0),
-    new THREE.Vector3(-1.62, 2.28, 0), new THREE.Vector3(-1.62, 2.1, 0)
+    new THREE.Vector3(-1.62, 2.28, 0), new THREE.Vector3(-1.62, 1.96, 0)
   ], false, 'centripetal');
   contextMesh(new THREE.TubeGeometry(sinkDrainCurve, 28, 0.16, 16, false), drainMat, [0, 0, 0]);
   const sinkDrainCoupling = contextMesh(new THREE.CylinderGeometry(0.205, 0.205, 0.24, 32), drainMat, [-1.62, 2.48, 0]);
 
   const plastic = new THREE.MeshStandardMaterial({ color: '#f4f3ed', roughness: 0.32, metalness: 0.02 });
-  const glass = new THREE.MeshPhysicalMaterial({ color: '#91adb8', roughness: 0.23, metalness: 0.035, transparent: true, opacity: 0.56, side: THREE.DoubleSide, depthWrite: false, transmission: 0.015 });
+  const glass = new THREE.MeshPhysicalMaterial({ color: '#8ab7cb', roughness: 0.28, metalness: 0.02, transparent: true, opacity: 0.42, side: THREE.DoubleSide, depthWrite: false, transmission: 0.01 });
   const pvc = new THREE.MeshPhysicalMaterial({ color: '#819aaa', roughness: 0.14, metalness: 0.06, transparent: true, opacity: 0.56, side: THREE.DoubleSide, depthWrite: false });
   const waterMat = new THREE.MeshPhysicalMaterial({ color: '#034770', roughness: 0.2, transparent: true, opacity: 0.84, transmission: 0.01, side: THREE.DoubleSide, depthWrite: false });
   const oilMat = new THREE.MeshPhysicalMaterial({ color: '#e5a91d', roughness: 0.15, transparent: true, opacity: 0.94, metalness: 0.08, side: THREE.DoubleSide, depthWrite: false });
@@ -242,7 +338,7 @@
   torusAt(chamber, 0.68, 0.052, 1.39, rimMat, 'chamber');
   torusAt(chamber, 0.68, 0.052, -1.39, rimMat, 'chamber');
   for (const side of [-1, 1]) {
-    const highlight = addMesh(chamber, new THREE.CylinderGeometry(0.014, 0.014, 2.68, 8), new THREE.MeshStandardMaterial({ color: '#d8f2fb', roughness: 0.24, metalness: 0.06, transparent: true, opacity: 0.46 }), 'chamber');
+    const highlight = addMesh(chamber, new THREE.CylinderGeometry(0.016, 0.016, 2.68, 8), new THREE.MeshStandardMaterial({ color: '#78b8d1', roughness: 0.24, metalness: 0.04, transparent: true, opacity: 0.7 }), 'chamber');
     highlight.position.set(side * 0.56, 0, 0.36);
   }
   const water = addMesh(chamber, new THREE.CylinderGeometry(0.615, 0.615, 1.9, 64, 1, false), waterMat, 'chamber');
@@ -302,6 +398,8 @@
     addMesh(pipe, new THREE.TubeGeometry(curve, 44, 0.135, 16, false), pvc, id);
     const ends = [points[0], points[points.length - 1]];
     ends.forEach((point, index) => {
+      // The sink drain overlaps this inlet end, so omit the open-end collar at the joint.
+      if (id === 'inlet' && index === 0) return;
       const direction = index === 0
         ? new THREE.Vector3(...points[1]).sub(new THREE.Vector3(...points[0])).normalize()
         : new THREE.Vector3(...points[points.length - 1]).sub(new THREE.Vector3(...points[points.length - 2])).normalize();
@@ -818,29 +916,12 @@
     });
   }
 
-  $('assembleButton').addEventListener('click', () => {
-    $('kitView').hidden = true;
-    $('productView').hidden = false;
-    $('modelDetails').hidden = true;
-    $('modelDetailContent').hidden = true;
-    document.querySelector('.product-layout').classList.remove('has-model-selection');
-    $('pageTitle').textContent = 'Your filter, assembled in 3D.';
-    $('pageSubTitle').textContent = 'Drag to rotate. Select a component to focus and inspect its material.';
-    $('productView').scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
-    if (!assembled) animateAssembly();
-    else paintDetails(selectedId);
-    resizeRenderer();
-  });
   $('replayButton').addEventListener('click', () => { assembled = false; replaced = false; animateAssembly(); });
   $('replaceButton').addEventListener('click', animateReplacement);
-  $('backButton').addEventListener('click', () => {
-    $('productView').hidden = true;
-    $('kitView').hidden = false;
-    $('pageTitle').textContent = 'A clearer way to filter water.';
-    $('pageSubTitle').textContent = 'Select any item in the box to focus it and see its material.';
-    window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
-  });
-  let autoRotate = !reducedMotion;
+  $('backButton').addEventListener('click', (event) => {
+    event.preventDefault();
+    $('kitView').scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
+  });  let autoRotate = !reducedMotion;
   let rotationTween = null;
   function setAutoRotation(active) {
     autoRotate = active;
@@ -864,6 +945,7 @@
   $('zoomOutButton').addEventListener('click', () => setZoom(Number(zoomSlider.value) - 5));
   $('zoomInButton').addEventListener('click', () => setZoom(Number(zoomSlider.value) + 5));
   zoomSlider.addEventListener('input', () => setZoom(zoomSlider.value));
+
   document.querySelectorAll('[data-part]').forEach((button) => {
     if (button.dataset.part === 'cups') return;
     button.addEventListener('keydown', (event) => {
@@ -921,12 +1003,14 @@
   resizeObserver.observe(stage);
   window.addEventListener('resize', resizeRenderer);
   let renderFrame = 0;
+  let productInView = false;
+  let initialAssemblyStarted = false;
   let lastRenderTime = 0;
   const frameInterval = lowPowerMode ? 1000 / 30 : 0;
   const flowClock = new THREE.Clock();
   function render(now = 0) {
     renderFrame = 0;
-    if ($('productView').hidden || document.visibilityState === 'hidden') return;
+    if (!productInView || document.visibilityState === 'hidden') return;
     if (frameInterval && now - lastRenderTime < frameInterval) {
       renderFrame = requestAnimationFrame(render);
       return;
@@ -973,9 +1057,19 @@
     renderer.render(scene, camera);
     renderFrame = requestAnimationFrame(render);
   }
-  function startRender() { if (!renderFrame && !$('productView').hidden && document.visibilityState !== 'hidden') render(); }
-  const sceneObserver = new MutationObserver(startRender);
-  sceneObserver.observe($('productView'), { attributes: true, attributeFilter: ['hidden'] });
+  function startRender() { if (!renderFrame && productInView && document.visibilityState !== 'hidden') render(); }
+  const productVisibilityObserver = new IntersectionObserver(([entry]) => {
+    productInView = entry.isIntersecting;
+    if (productInView) {
+      resizeRenderer();
+      if (!initialAssemblyStarted) {
+        initialAssemblyStarted = true;
+        animateAssembly();
+      }
+      startRender();
+    }
+  }, { threshold: 0.18 });
+  productVisibilityObserver.observe($('productView'));
   document.addEventListener('visibilitychange', startRender);
   canvas.addEventListener('webglcontextlost', (event) => { event.preventDefault(); if (fallback) fallback.hidden = false; });
   resizeRenderer();
