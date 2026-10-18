@@ -149,7 +149,7 @@
   const installContext = new THREE.Group();
   installContext.visible = false;
   productRoot.add(installContext);
-  const cabinetMat = new THREE.MeshStandardMaterial({ color: '#d5c7a8', roughness: 0.9, transparent: true, opacity: 0.82, side: THREE.DoubleSide });
+  const cabinetMat = new THREE.MeshStandardMaterial({ color: '#D2B48C', roughness: 0.9, transparent: true, opacity: 0.82, side: THREE.DoubleSide });
   const cabinetEdgeMat = new THREE.MeshStandardMaterial({ color: '#9d8867', roughness: 0.86, transparent: true, opacity: 0.84 });
   const sinkMat = new THREE.MeshStandardMaterial({ color: '#d6dfdd', roughness: 0.36, metalness: 0.14, transparent: true, opacity: 0.96, side: THREE.DoubleSide });
   const drainMat = new THREE.MeshStandardMaterial({ color: '#858c87', roughness: 0.48, metalness: 0.06, transparent: true, opacity: 0.96 });
