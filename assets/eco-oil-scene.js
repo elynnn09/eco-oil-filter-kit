@@ -236,15 +236,33 @@
     const curve = new THREE.CatmullRomCurve3(points.map((point) => new THREE.Vector3(...point)), false, 'centripetal');
     addMesh(pipe, new THREE.TubeGeometry(curve, 44, 0.135, 16, false), pvc, id);
     const ends = [points[0], points[points.length - 1]];
-    ends.forEach((point) => {
-      const collar = addMesh(pipe, new THREE.CylinderGeometry(0.17, 0.17, 0.075, 32), new THREE.MeshStandardMaterial({ color: '#b8cad3', roughness: 0.24, metalness: 0.08, transparent: true, opacity: 0.8 }), id);
-      collar.position.set(point[0], point[1], point[2]);
-      collar.rotation.z = Math.PI / 2;
+    ends.forEach((point, index) => {
+      const direction = index === 0
+        ? new THREE.Vector3(...points[1]).sub(new THREE.Vector3(...points[0])).normalize()
+        : new THREE.Vector3(...points[points.length - 1]).sub(new THREE.Vector3(...points[points.length - 2])).normalize();
+      const lip = addMesh(pipe, new THREE.TorusGeometry(0.145, 0.018, 12, 48), new THREE.MeshStandardMaterial({ color: '#d9e7eb', roughness: 0.22, metalness: 0.12, transparent: true, opacity: 0.84 }), id);
+      lip.position.set(point[0], point[1], point[2]);
+      lip.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
+      const innerLip = addMesh(pipe, new THREE.TorusGeometry(0.105, 0.008, 8, 40), new THREE.MeshStandardMaterial({ color: '#526976', roughness: 0.35, transparent: true, opacity: 0.58 }), id);
+      innerLip.position.set(point[0], point[1], point[2]);
+      innerLip.quaternion.copy(lip.quaternion);
     });
-    return pipe;
+    return { pipe, curve };
   }
-  const inlet = makePipe('inlet', [[-1.62, 0.84, 0], [-1.62, 0.48, 0], [-1.52, 0.38, 0], [-0.63, 0.38, 0]]);
-  const outlet = makePipe('outlet', [[0, -1.42, 0], [0, -1.83, 0], [0.16, -2.0, 0], [1.14, -2.0, 0]]);
+  const inletGeometry = makePipe('inlet', [[-1.62, 0.84, 0], [-1.62, 0.48, 0], [-1.52, 0.38, 0], [-0.63, 0.38, 0]]);
+  const inlet = inletGeometry.pipe;
+  const outlet = makePipe('outlet', [[0, -1.42, 0], [0, -1.83, 0], [0.16, -2.0, 0], [1.14, -2.0, 0]]).pipe;
+
+  const inletFlowMat = new THREE.MeshPhysicalMaterial({ color: '#57bce4', roughness: 0.12, transparent: true, opacity: 0, transmission: 0.04, side: THREE.DoubleSide, depthWrite: false });
+  const inletFlow = addMesh(inlet, new THREE.TubeGeometry(inletGeometry.curve, 64, 0.079, 16, false), inletFlowMat, 'inlet');
+  inletFlow.visible = false;
+  const oilFlowMat = new THREE.MeshStandardMaterial({ color: '#f0aa22', roughness: 0.14, metalness: 0.03, transparent: true, opacity: 0, depthWrite: false });
+  const oilFlowDrops = [];
+  for (let i = 0; i < 5; i++) {
+    const drop = addMesh(inlet, new THREE.SphereGeometry(0.042 + (i % 2) * 0.009, 14, 10), oilFlowMat, 'inlet');
+    drop.visible = false;
+    oilFlowDrops.push(drop);
+  }
 
   function makePack(id) {
     const pack = partRoot(id);
@@ -370,6 +388,10 @@
     oilSurface.visible = false;
     oilMat.opacity = 0.94;
     oilSurfaceMat.opacity = 0.94;
+    inletFlow.visible = false;
+    inletFlowMat.opacity = 0;
+    oilFlowDrops.forEach((drop) => { drop.visible = false; });
+    oilFlowMat.opacity = 0;
     bubbles.forEach((bubble) => { bubble.visible = false; });
     chamber.position.set(-2.4, 0.65, -0.25);
     bottomCap.position.set(-0.75, -3.0, 0.15);
@@ -480,9 +502,13 @@
       oilSurfaceMat.opacity = 0;
       oilSurface.position.y = OIL_START_Y + 0.06;
       bubbles.forEach((bubble) => { bubble.visible = true; });
+      inletFlow.visible = true;
+      oilFlowDrops.forEach((drop) => { drop.visible = true; });
     });
     timeline.to(water.scale, { y: 1, duration: 1.45, ease: 'power1.inOut' });
     timeline.to(water.position, { y: -0.28, duration: 1.45, ease: 'power1.inOut' }, '<');
+    timeline.to(inletFlowMat, { opacity: 0.82, duration: 1.2, ease: 'power1.inOut' }, '<');
+    timeline.to(oilFlowMat, { opacity: 0.94, duration: 1.05, ease: 'power1.inOut' }, '<+=0.35');
     timeline.call(() => bubbles.forEach((bubble) => { bubble.visible = true; }));
     timeline.to(oilMat, { opacity: 0.94, duration: 0.7, ease: 'power1.out' }, '-=0.35');
     timeline.to(oilSurfaceMat, { opacity: 0.94, duration: 0.7, ease: 'power1.out' }, '<');
@@ -676,12 +702,20 @@
   resizeObserver.observe(stage);
   window.addEventListener('resize', resizeRenderer);
   let renderFrame = 0;
+  const flowClock = new THREE.Clock();
   function render() {
     renderFrame = 0;
     if ($('productView').hidden || document.visibilityState === 'hidden') return;
     if (hand.visible) {
       if (activePack.visible) updateCord(activeCord, activePack, hand, true);
       else if (sparePack.visible) updateCord(spareCord, sparePack, hand, true);
+    }
+    if (inletFlow.visible) {
+      const flowTime = flowClock.getElapsedTime();
+      oilFlowDrops.forEach((drop, index) => {
+        const progress = (flowTime * 0.18 + index / oilFlowDrops.length) % 1;
+        drop.position.copy(inletGeometry.curve.getPointAt(progress));
+      });
     }
     renderer.render(scene, camera);
     renderFrame = requestAnimationFrame(render);
