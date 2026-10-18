@@ -230,12 +230,12 @@
   const water = addMesh(chamber, new THREE.CylinderGeometry(0.615, 0.615, 1.9, 64, 1, false), waterMat, 'chamber');
   water.position.y = -0.28;
   water.visible = false;
-  const waterSurfaceMat = new THREE.MeshPhysicalMaterial({ color: '#3d9ac1', roughness: 0.2, metalness: 0.02, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false });
+  const waterSurfaceMat = new THREE.MeshPhysicalMaterial({ color: '#034770', roughness: 0.24, metalness: 0.02, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false });
   const waterSurface = addMesh(chamber, new THREE.CircleGeometry(0.608, 64), waterSurfaceMat, 'chamber');
   waterSurface.rotation.x = -Math.PI / 2;
   waterSurface.visible = false;
-  const waterRippleMat = new THREE.MeshStandardMaterial({ color: '#a7e4fa', roughness: 0.2, transparent: true, opacity: 0, depthWrite: false });
-  const waterRipple = torusAt(chamber, 0.43, 0.014, 0, waterRippleMat, 'chamber');
+  const waterRippleMat = new THREE.MeshStandardMaterial({ color: '#9ac9df', roughness: 0.28, transparent: true, opacity: 0, depthWrite: false });
+  const waterRipple = torusAt(chamber, 0.2, 0.006, 0, waterRippleMat, 'chamber');
   waterRipple.visible = false;
   const oil = addMesh(chamber, new THREE.CylinderGeometry(0.617, 0.617, 0.105, 48, 1, false), oilMat, 'chamber');
   const OIL_START_Y = 0.73;
@@ -309,19 +309,19 @@
   const inletFlowMat = new THREE.MeshPhysicalMaterial({ color: '#034770', roughness: 0.12, transparent: true, opacity: 0, transmission: 0.04, side: THREE.DoubleSide, depthWrite: false });
   const inletFlow = addMesh(inlet, new THREE.TubeGeometry(flowCurve, 64, 0.087, 16, false), inletFlowMat, 'inlet');
   inletFlow.visible = false;
-  const tankFlowPoints = [[-0.63, 0.38, 0.08], [-0.4, 0.34, 0.08], [-0.2, 0.16, 0.08], [-0.06, -0.1, 0.08], [-0.02, -0.42, 0.08], [-0.02, -0.78, 0.08], [-0.02, -1.28, 0.08]];
+  const tankFlowPoints = [[-0.63, 0.38, 0.08], [-0.48, 0.35, 0.08], [-0.31, 0.27, 0.08], [-0.18, 0.14, 0.08], [-0.12, 0.02, 0.08]];
   const tankFlowCurve = new THREE.CatmullRomCurve3(tankFlowPoints.map((point) => new THREE.Vector3(...point)), false, 'centripetal');
-  const tankFlowMat = new THREE.MeshPhysicalMaterial({ color: '#034770', roughness: 0.2, transparent: true, opacity: 0, transmission: 0, side: THREE.DoubleSide, depthWrite: false, emissive: '#034770', emissiveIntensity: 0.18 });
-  const tankFlow = addMesh(chamber, new THREE.TubeGeometry(tankFlowCurve, 64, 0.14, 24, false), tankFlowMat, 'chamber');
+  const tankFlowMat = new THREE.MeshPhysicalMaterial({ color: '#034770', roughness: 0.28, transparent: true, opacity: 0, transmission: 0, side: THREE.DoubleSide, depthWrite: false, emissive: '#034770', emissiveIntensity: 0.035 });
+  const tankFlow = addMesh(chamber, new THREE.TubeGeometry(tankFlowCurve, 48, 0.062, 14, false), tankFlowMat, 'chamber');
   tankFlow.visible = false;
-  const tankFlowSheenMat = new THREE.MeshStandardMaterial({ color: '#83cce7', roughness: 0.2, transparent: true, opacity: 0, depthWrite: false, emissive: '#2788b1', emissiveIntensity: 0.18 });
-  const tankFlowSheen = addMesh(chamber, new THREE.TubeGeometry(tankFlowCurve, 64, 0.024, 12, false), tankFlowSheenMat, 'chamber');
+  const tankFlowSheenMat = new THREE.MeshStandardMaterial({ color: '#b6d9e8', roughness: 0.3, transparent: true, opacity: 0, depthWrite: false, emissive: '#2788b1', emissiveIntensity: 0.035 });
+  const tankFlowSheen = addMesh(chamber, new THREE.TubeGeometry(tankFlowCurve, 48, 0.009, 8, false), tankFlowSheenMat, 'chamber');
   tankFlowSheen.position.x = 0.05;
   tankFlowSheen.visible = false;
-  const tankFlowBeadMat = new THREE.MeshStandardMaterial({ color: '#b9eafa', roughness: 0.16, transparent: true, opacity: 0, depthWrite: false, emissive: '#55bce0', emissiveIntensity: 0.22 });
+  const tankFlowBeadMat = new THREE.MeshStandardMaterial({ color: '#b9eafa', roughness: 0.2, transparent: true, opacity: 0, depthWrite: false, emissive: '#55bce0', emissiveIntensity: 0.04 });
   const tankFlowBeads = [];
-  for (let i = 0; i < 6; i++) {
-    const bead = addMesh(chamber, new THREE.SphereGeometry(0.031 + (i % 3) * 0.006, 14, 12), tankFlowBeadMat, 'chamber');
+  for (let i = 0; i < 2; i++) {
+    const bead = addMesh(chamber, new THREE.SphereGeometry(0.012, 10, 8), tankFlowBeadMat, 'chamber');
     bead.visible = false;
     tankFlowBeads.push(bead);
   }
@@ -661,14 +661,14 @@
       syncWaterGeometry();
     });
     timeline.to(inletFlowMat, { opacity: 0.82, duration: 1.25, ease: 'power1.inOut' });
-    timeline.to(tankFlowMat, { opacity: 0.88, duration: 1.35, ease: 'power1.inOut' }, '<+=0.3');
-    timeline.to(tankFlowSheenMat, { opacity: 0.74, duration: 1.35, ease: 'power1.inOut' }, '<');
-    timeline.to(tankFlowBeadMat, { opacity: 0.9, duration: 0.8, ease: 'power1.out' }, '<+=0.2');
-    timeline.to(waterSurfaceMat, { opacity: 0.82, duration: 1.2, ease: 'power1.out' }, '<');
-    timeline.to(waterRippleMat, { opacity: 0.74, duration: 1.2, ease: 'power1.out' }, '<');
+    timeline.to(tankFlowMat, { opacity: 0.62, duration: 1.35, ease: 'power1.inOut' }, '<+=0.3');
+    timeline.to(tankFlowSheenMat, { opacity: 0.22, duration: 1.35, ease: 'power1.inOut' }, '<');
+    timeline.to(tankFlowBeadMat, { opacity: 0.38, duration: 0.8, ease: 'power1.out' }, '<+=0.2');
+    timeline.to(waterSurfaceMat, { opacity: 0.46, duration: 1.2, ease: 'power1.out' }, '<');
+    timeline.to(waterRippleMat, { opacity: 0.2, duration: 1.2, ease: 'power1.out' }, '<');
     timeline.to(oilFlowMat, { opacity: 0.94, duration: 1.5, ease: 'power1.inOut' }, '<');
     timeline.to(water.scale, { y: 0.62, duration: 7.2, ease: 'none', onUpdate: () => { syncWaterGeometry(); updateProgress(84 + Math.round(water.scale.y * 8)); } }, '<');
-    timeline.to(bubbleMat, { opacity: 0.76, duration: 3.4, ease: 'power1.out' }, '<+=1.2');
+    timeline.to(bubbleMat, { opacity: 0.28, duration: 3.4, ease: 'power1.out' }, '<+=1.2');
     timeline.call(() => {
       updateStatus('Grease droplets are gradually captured by the material pack');
       outletFlow.visible = true;
