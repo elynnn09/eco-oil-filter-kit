@@ -309,19 +309,19 @@
   const inletFlowMat = new THREE.MeshPhysicalMaterial({ color: '#034770', roughness: 0.12, transparent: true, opacity: 0, transmission: 0.04, side: THREE.DoubleSide, depthWrite: false });
   const inletFlow = addMesh(inlet, new THREE.TubeGeometry(flowCurve, 64, 0.087, 16, false), inletFlowMat, 'inlet');
   inletFlow.visible = false;
-  const tankFlowPoints = [[-0.63, 0.38, 0.045], [-0.43, 0.32, 0.045], [-0.22, 0.12, 0.045], [-0.06, -0.18, 0.045], [0.02, -0.52, 0.045], [0.02, -0.9, 0.045], [0.02, -1.32, 0.045]];
+  const tankFlowPoints = [[-0.63, 0.38, 0.08], [-0.4, 0.34, 0.08], [-0.2, 0.16, 0.08], [-0.06, -0.1, 0.08], [-0.02, -0.42, 0.08], [-0.02, -0.78, 0.08], [-0.02, -1.28, 0.08]];
   const tankFlowCurve = new THREE.CatmullRomCurve3(tankFlowPoints.map((point) => new THREE.Vector3(...point)), false, 'centripetal');
   const tankFlowMat = new THREE.MeshPhysicalMaterial({ color: '#034770', roughness: 0.2, transparent: true, opacity: 0, transmission: 0, side: THREE.DoubleSide, depthWrite: false, emissive: '#034770', emissiveIntensity: 0.18 });
-  const tankFlow = addMesh(chamber, new THREE.TubeGeometry(tankFlowCurve, 64, 0.245, 24, false), tankFlowMat, 'chamber');
+  const tankFlow = addMesh(chamber, new THREE.TubeGeometry(tankFlowCurve, 64, 0.14, 24, false), tankFlowMat, 'chamber');
   tankFlow.visible = false;
   const tankFlowSheenMat = new THREE.MeshStandardMaterial({ color: '#83cce7', roughness: 0.2, transparent: true, opacity: 0, depthWrite: false, emissive: '#2788b1', emissiveIntensity: 0.18 });
-  const tankFlowSheen = addMesh(chamber, new THREE.TubeGeometry(tankFlowCurve, 64, 0.052, 12, false), tankFlowSheenMat, 'chamber');
-  tankFlowSheen.position.x = 0.09;
+  const tankFlowSheen = addMesh(chamber, new THREE.TubeGeometry(tankFlowCurve, 64, 0.024, 12, false), tankFlowSheenMat, 'chamber');
+  tankFlowSheen.position.x = 0.05;
   tankFlowSheen.visible = false;
   const tankFlowBeadMat = new THREE.MeshStandardMaterial({ color: '#b9eafa', roughness: 0.16, transparent: true, opacity: 0, depthWrite: false, emissive: '#55bce0', emissiveIntensity: 0.22 });
   const tankFlowBeads = [];
   for (let i = 0; i < 6; i++) {
-    const bead = addMesh(chamber, new THREE.SphereGeometry(0.043 + (i % 3) * 0.008, 14, 12), tankFlowBeadMat, 'chamber');
+    const bead = addMesh(chamber, new THREE.SphereGeometry(0.031 + (i % 3) * 0.006, 14, 12), tankFlowBeadMat, 'chamber');
     bead.visible = false;
     tankFlowBeads.push(bead);
   }
