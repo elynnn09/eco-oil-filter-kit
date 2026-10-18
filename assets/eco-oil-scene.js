@@ -702,9 +702,9 @@
     timeline.to({}, { duration: 4.4 });
     timeline.call(() => updateStatus('Filtered water continues down the lower PVC while the tank level slowly falls'));
     timeline.to(water.scale, { y: 0.28, duration: 7.2, ease: 'none', onUpdate: () => { syncWaterGeometry(); updateProgress(92 + Math.round((1 - water.scale.y) * 8)); } });
-    // Stop the incoming mixed-water stream as the tank begins draining. Keep the
-    // lower outlet and underground drain active so only the inlet flow stops.
-    timeline.to([inletFlowMat, tankFlowMat, tankFlowSheenMat, tankFlowBeadMat, oilFlowMat], { opacity: 0, duration: 0.72, ease: 'power1.in' }, '<');
+    // Let the level visibly begin to fall before stopping incoming mixed water.
+    // Keep the lower outlet and underground drain active throughout.
+    timeline.to([inletFlowMat, tankFlowMat, tankFlowSheenMat, tankFlowBeadMat, oilFlowMat], { opacity: 0, duration: 0.72, ease: 'power1.in' }, '<+=1.2');
     timeline.call(() => {
       inletFlow.visible = false;
       tankFlow.visible = false;
