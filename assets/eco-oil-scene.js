@@ -597,7 +597,7 @@
     timeline.to(camera.position, { x: installCameraPosition.x, y: installCameraPosition.y, z: installCameraPosition.z, duration: 1.28, ease: 'power3.inOut', onUpdate: () => camera.lookAt(cameraTarget) }, '<');
     timeline.to(cameraTarget, { x: installCameraTarget.x, y: installCameraTarget.y, z: installCameraTarget.z, duration: 1.28, ease: 'power3.inOut', onUpdate: () => camera.lookAt(cameraTarget) }, '<');
     timeline.call(() => {
-      updateStatus('Water and oil enter through the upper PVC pipe');
+      updateStatus('Water-oil mixture flowing slowly into the tank');
       water.visible = true;
       water.scale.y = 0.001;
       water.position.y = 0.669;
@@ -607,26 +607,35 @@
       oilSurface.visible = true;
       oilSurfaceMat.opacity = 0;
       oilSurface.position.y = OIL_START_Y + 0.06;
+      bubbleMat.opacity = 0;
       bubbles.forEach((bubble) => { bubble.visible = true; });
       inletFlow.visible = true;
       oilFlowDrops.forEach((drop) => { drop.visible = true; });
+      outletFlow.visible = false;
+      outletFlowMat.opacity = 0;
+      outletDrops.forEach((drop) => { drop.visible = false; });
+      undergroundFlow.visible = false;
+      undergroundFlowMat.opacity = 0;
+      undergroundDrops.forEach((drop) => { drop.visible = false; });
+    });
+    timeline.to(inletFlowMat, { opacity: 0.82, duration: 1.25, ease: 'power1.inOut' });
+    timeline.to(oilFlowMat, { opacity: 0.94, duration: 1.5, ease: 'power1.inOut' }, '<+=0.35');
+    timeline.to(water.scale, { y: 1, duration: 7.2, ease: 'none', onUpdate: () => updateProgress(84 + Math.round(water.scale.y * 8)) }, '<');
+    timeline.to(water.position, { y: -0.28, duration: 7.2, ease: 'none' }, '<');
+    timeline.to(bubbleMat, { opacity: 0.76, duration: 3.4, ease: 'power1.out' }, '<+=1.2');
+    timeline.to(oilMat, { opacity: 0.94, duration: 2.8, ease: 'power1.inOut' }, '<+=2.4');
+    timeline.to(oilSurfaceMat, { opacity: 0.94, duration: 2.8, ease: 'power1.inOut' }, '<');
+    timeline.call(() => {
+      updateStatus('Filtered water reaches the lower outlet and drains underground');
       outletFlow.visible = true;
       outletDrops.forEach((drop) => { drop.visible = true; });
       undergroundFlow.visible = true;
       undergroundDrops.forEach((drop) => { drop.visible = true; });
     });
-    timeline.to(water.scale, { y: 1, duration: 1.45, ease: 'power1.inOut' });
-    timeline.to(water.position, { y: -0.28, duration: 1.45, ease: 'power1.inOut' }, '<');
-    timeline.to(inletFlowMat, { opacity: 0.82, duration: 1.2, ease: 'power1.inOut' }, '<');
-    timeline.to(oilFlowMat, { opacity: 0.94, duration: 1.05, ease: 'power1.inOut' }, '<+=0.35');
-    timeline.call(() => bubbles.forEach((bubble) => { bubble.visible = true; }));
-    timeline.to(oilMat, { opacity: 0.94, duration: 0.7, ease: 'power1.out' }, '-=0.35');
-    timeline.to(oilSurfaceMat, { opacity: 0.94, duration: 0.7, ease: 'power1.out' }, '<');
-    timeline.call(() => updateStatus('Filtered water exits into the underground drain')); 
-    timeline.to(outletFlowMat, { opacity: 0.92, duration: 0.7, ease: 'power1.out' });
-    timeline.to(outletDrops.map((drop) => drop.material), { opacity: 0.96, duration: 0.55, ease: 'power1.out' }, '<');
-    timeline.to(undergroundFlowMat, { opacity: 0.84, duration: 0.7, ease: 'power1.out' }, '<');
-    timeline.to(undergroundDrops.map((drop) => drop.material), { opacity: 0.96, duration: 0.55, ease: 'power1.out' }, '<');
+    timeline.to(outletFlowMat, { opacity: 0.92, duration: 0.8, ease: 'power1.out' });
+    timeline.to(outletDrops.map((drop) => drop.material), { opacity: 0.96, duration: 0.65, ease: 'power1.out' }, '<');
+    timeline.to(undergroundFlowMat, { opacity: 0.84, duration: 0.8, ease: 'power1.out' }, '<');
+    timeline.to(undergroundDrops.map((drop) => drop.material), { opacity: 0.96, duration: 0.65, ease: 'power1.out' }, '<');
     timeline.call(() => { updateStatus('Running · Water-oil mix in · Filtered water out'); updateProgress(100); });
   }
 
