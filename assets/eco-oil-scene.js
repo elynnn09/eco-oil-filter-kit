@@ -102,6 +102,7 @@
   });
 
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const lowPowerMode = window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(max-width: 768px)').matches;
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#B8D8C0');
   const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 80);
@@ -111,19 +112,19 @@
   camera.lookAt(cameraTarget);
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lowPowerMode ? 1.1 : 1.6));
   renderer.setSize(stage.clientWidth || 1, stage.clientHeight || 1, false);
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.94;
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.enabled = !lowPowerMode;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
 
   scene.add(new THREE.HemisphereLight('#f8fff9', '#526657', 1.45));
   const key = new THREE.DirectionalLight('#fff8ec', 2.2);
   key.position.set(-4, 7, 6);
-  key.castShadow = true;
-  key.shadow.mapSize.set(1024, 1024);
+  key.castShadow = !lowPowerMode;
+  key.shadow.mapSize.set(lowPowerMode ? 512 : 1024, lowPowerMode ? 512 : 1024);
   key.shadow.camera.left = -4;
   key.shadow.camera.right = 4;
   key.shadow.camera.top = 4;
@@ -814,7 +815,7 @@
     const width = stage.clientWidth;
     const height = stage.clientHeight;
     if (!width || !height) return;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lowPowerMode ? 1.1 : 1.6));
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
@@ -823,10 +824,17 @@
   resizeObserver.observe(stage);
   window.addEventListener('resize', resizeRenderer);
   let renderFrame = 0;
+  let lastRenderTime = 0;
+  const frameInterval = lowPowerMode ? 1000 / 30 : 0;
   const flowClock = new THREE.Clock();
-  function render() {
+  function render(now = 0) {
     renderFrame = 0;
     if ($('productView').hidden || document.visibilityState === 'hidden') return;
+    if (frameInterval && now - lastRenderTime < frameInterval) {
+      renderFrame = requestAnimationFrame(render);
+      return;
+    }
+    lastRenderTime = now;
     if (hand.visible) {
       if (activePack.visible) updateCord(activeCord, activePack, hand, true);
       else if (sparePack.visible) updateCord(spareCord, sparePack, hand, true);
