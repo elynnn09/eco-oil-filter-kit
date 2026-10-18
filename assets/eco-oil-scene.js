@@ -84,8 +84,9 @@
     // that final position so the card doesn't stay stranded at its pre-zoom spot.
     const anchorX = stageRect.left + stageRect.width / 2;
     const anchorY = stageRect.top + stageRect.height / 2;
-    const objectClearance = Math.min(stageRect.width * 0.055, 70);
-    const gap = 10;
+    const mobileCard = window.matchMedia("(max-width: 600px)").matches;
+    const objectClearance = mobileCard ? Math.min(stageRect.width * 0.025, 8) : Math.min(stageRect.width * 0.055, 70);
+    const gap = mobileCard ? 4 : 10;
     const stageLeft = stageRect.left - workspaceRect.left + 12;
     const stageRight = stageRect.right - workspaceRect.left - cardWidth - 12;
     const rightSide = anchorX - workspaceRect.left + objectClearance + gap;
@@ -115,7 +116,7 @@
     const artwork = $('kitArtwork');
     if (!kitImage || !kitStage || !artwork) return;
     const focus = focusPoints[id] || focusPoints.chamber;
-    const scale = 0.91;
+    const scale = window.matchMedia('(max-width: 600px)').matches ? 1.3 : 0.91;
     const bounds = kitStage.getBoundingClientRect();
     const tx = bounds.width * (0.5 - focus.x) * scale;
     const ty = bounds.height * (0.5 - focus.y) * scale;
