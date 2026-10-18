@@ -702,6 +702,16 @@
     timeline.to({}, { duration: 4.4 });
     timeline.call(() => updateStatus('Filtered water continues down the lower PVC while the tank level slowly falls'));
     timeline.to(water.scale, { y: 0.28, duration: 7.2, ease: 'none', onUpdate: () => { syncWaterGeometry(); updateProgress(92 + Math.round((1 - water.scale.y) * 8)); } });
+    // Stop the incoming mixed-water stream as the tank begins draining. Keep the
+    // lower outlet and underground drain active so only the inlet flow stops.
+    timeline.to([inletFlowMat, tankFlowMat, tankFlowSheenMat, tankFlowBeadMat, oilFlowMat], { opacity: 0, duration: 0.72, ease: 'power1.in' }, '<');
+    timeline.call(() => {
+      inletFlow.visible = false;
+      tankFlow.visible = false;
+      tankFlowSheen.visible = false;
+      tankFlowBeads.forEach((bead) => { bead.visible = false; });
+      oilFlowDrops.forEach((drop) => { drop.visible = false; });
+    }, null, '<+=0.73');
     timeline.call(() => updateStatus('Running · Grease captured in the pack · Water draining underground'));
   }
 
@@ -914,23 +924,31 @@
       if (activePack.visible) updateCord(activeCord, activePack, hand, true);
       else if (sparePack.visible) updateCord(spareCord, sparePack, hand, true);
     }
+    const flowTime = flowClock.getElapsedTime();
     if (inletFlow.visible) {
-      const flowTime = flowClock.getElapsedTime();
       oilFlowDrops.forEach((drop, index) => {
         const progress = (flowTime * 0.18 + index / oilFlowDrops.length) % 1;
         drop.position.copy(mixedFlowCurve.getPointAt(progress));
       });
+    }
+    if (tankFlow.visible) {
       tankFlowBeads.forEach((bead, index) => {
         const progress = (flowTime * 0.14 + index / tankFlowBeads.length) % 1;
         bead.position.copy(tankFlowCurve.getPointAt(progress));
       });
+    }
+    if (waterRipple.visible) {
       const ripplePulse = 0.985 + Math.sin(flowTime * 1.35) * 0.018;
       waterRipple.scale.set(ripplePulse, 1, ripplePulse);
       waterRippleMat.opacity = 0.145 + Math.sin(flowTime * 1.35) * 0.015;
+    }
+    if (outletFlow.visible) {
       outletDrops.forEach((drop, index) => {
         const progress = (flowTime * 0.24 + index / outletDrops.length) % 1;
         drop.position.copy(outletFlowCurve.getPointAt(progress));
       });
+    }
+    if (undergroundFlow.visible) {
       undergroundDrops.forEach((drop, index) => {
         const progress = (flowTime * 0.18 + index / undergroundDrops.length) % 1;
         drop.position.copy(installOutletCurve.getPointAt(progress));
