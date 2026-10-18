@@ -105,8 +105,8 @@
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#A5D6A7');
-  const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 80);
-  const baseCameraPosition = new THREE.Vector3(4.6, 2.4, 8.7);
+  const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 80);
+  const baseCameraPosition = new THREE.Vector3(5.1, 2.6, 11.4);
   const cameraTarget = new THREE.Vector3(0, -0.18, 0);
   camera.position.copy(baseCameraPosition);
   camera.lookAt(cameraTarget);
@@ -143,6 +143,41 @@
   productRoot.position.y = -0.05;
   scene.add(productRoot);
   const modelParts = {};
+  let installed = false;
+  const installCameraPosition = new THREE.Vector3(4.9, 1.55, 12.1);
+  const installCameraTarget = new THREE.Vector3(0.45, -0.92, 0);
+  const installContext = new THREE.Group();
+  installContext.visible = false;
+  productRoot.add(installContext);
+  const cabinetMat = new THREE.MeshStandardMaterial({ color: '#d5c7a8', roughness: 0.9, transparent: true, opacity: 0.82, side: THREE.DoubleSide });
+  const cabinetEdgeMat = new THREE.MeshStandardMaterial({ color: '#9d8867', roughness: 0.86, transparent: true, opacity: 0.84 });
+  const sinkMat = new THREE.MeshStandardMaterial({ color: '#d6dfdd', roughness: 0.36, metalness: 0.14, transparent: true, opacity: 0.96, side: THREE.DoubleSide });
+  const drainMat = new THREE.MeshStandardMaterial({ color: '#858c87', roughness: 0.48, metalness: 0.06, transparent: true, opacity: 0.96 });
+  function contextMesh(geometry, material, position, scale) {
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(...position);
+    if (scale) mesh.scale.set(...scale);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    installContext.add(mesh);
+    return mesh;
+  }
+  // A quiet, open-front cabinet lets the installed filter and its pipework stay legible.
+  contextMesh(new THREE.BoxGeometry(7.2, 0.18, 3.5), cabinetMat, [0, 3.02, -0.12]);
+  contextMesh(new THREE.BoxGeometry(7.2, 0.12, 3.5), cabinetMat, [0, -3.12, -0.12]);
+  contextMesh(new THREE.BoxGeometry(0.12, 6.1, 3.5), cabinetMat, [-3.54, -0.02, -0.12]);
+  contextMesh(new THREE.BoxGeometry(0.12, 6.1, 3.5), cabinetMat, [3.54, -0.02, -0.12]);
+  contextMesh(new THREE.BoxGeometry(7.2, 6.1, 0.1), cabinetMat, [0, -0.02, -1.82]);
+  contextMesh(new THREE.BoxGeometry(7.25, 0.055, 3.56), cabinetEdgeMat, [0, 2.9, -0.12]);
+  contextMesh(new THREE.BoxGeometry(7.25, 0.055, 3.56), cabinetEdgeMat, [0, -3.04, -0.12]);
+  contextMesh(new THREE.SphereGeometry(1, 48, 28), sinkMat, [-1.62, 3.08, 0.24], [1.12, 0.34, 0.92]);
+  // The drain stem from the sink joins the filter's raised upper PVC inlet.
+  const sinkDrainCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-1.62, 2.86, 0), new THREE.Vector3(-1.62, 2.48, 0),
+    new THREE.Vector3(-1.62, 2.28, 0), new THREE.Vector3(-1.62, 2.1, 0)
+  ], false, 'centripetal');
+  contextMesh(new THREE.TubeGeometry(sinkDrainCurve, 28, 0.16, 16, false), drainMat, [0, 0, 0]);
+  const sinkDrainCoupling = contextMesh(new THREE.CylinderGeometry(0.205, 0.205, 0.24, 32), drainMat, [-1.62, 2.48, 0]);
 
   const plastic = new THREE.MeshStandardMaterial({ color: '#f4f3ed', roughness: 0.32, metalness: 0.02 });
   const glass = new THREE.MeshPhysicalMaterial({ color: '#aac8d4', roughness: 0.13, metalness: 0.035, transparent: true, opacity: 0.4, side: THREE.DoubleSide, depthWrite: false, transmission: 0.08 });
@@ -249,12 +284,15 @@
     });
     return { pipe, curve };
   }
-  const inletGeometry = makePipe('inlet', [[-1.62, 0.84, 0], [-1.62, 0.48, 0], [-1.52, 0.38, 0], [-0.63, 0.38, 0]]);
+  const inletPoints = [[-1.62, 2.1, 0], [-1.62, 0.84, 0], [-1.62, 0.48, 0], [-1.52, 0.38, 0], [-0.63, 0.38, 0]];
+  const inletGeometry = makePipe('inlet', inletPoints);
   const inlet = inletGeometry.pipe;
-  const outlet = makePipe('outlet', [[0, -1.42, 0], [0, -1.83, 0], [0.16, -2.0, 0], [1.14, -2.0, 0]]).pipe;
+  const outletPoints = [[0, -1.42, 0], [0, -1.83, 0], [0.16, -2.0, 0], [1.14, -2.0, 0]];
+  const outletGeometry = makePipe('outlet', outletPoints);
+  const outlet = outletGeometry.pipe;
 
   const flowCurve = new THREE.CatmullRomCurve3(
-    [[-1.62, 0.84, 0.035], [-1.62, 0.48, 0.035], [-1.52, 0.38, 0.035], [-0.58, 0.38, 0.035]].map((point) => new THREE.Vector3(...point)),
+    inletPoints.map((point) => new THREE.Vector3(point[0], point[1], point[2] + 0.035)),
     false,
     'centripetal'
   );
@@ -267,6 +305,16 @@
     const drop = addMesh(inlet, new THREE.SphereGeometry(0.047 + (i % 2) * 0.008, 14, 10), oilFlowMat, 'inlet');
     drop.visible = false;
     oilFlowDrops.push(drop);
+  }
+  const outletFlowCurve = new THREE.CatmullRomCurve3(outletPoints.map((point) => new THREE.Vector3(point[0], point[1], point[2] + 0.035)), false, 'centripetal');
+  const outletFlowMat = new THREE.MeshPhysicalMaterial({ color: '#9fe6f2', roughness: 0.1, transparent: true, opacity: 0, transmission: 0.04, side: THREE.DoubleSide, depthWrite: false });
+  const outletFlow = addMesh(outlet, new THREE.TubeGeometry(outletFlowCurve, 48, 0.074, 14, false), outletFlowMat, 'outlet');
+  outletFlow.visible = false;
+  const outletDrops = [];
+  for (let i = 0; i < 4; i++) {
+    const drop = addMesh(outlet, new THREE.SphereGeometry(0.038 + (i % 2) * 0.009, 12, 10), new THREE.MeshStandardMaterial({ color: '#c9f4ff', roughness: 0.12, transparent: true, opacity: 0, depthWrite: false }), 'outlet');
+    drop.visible = false;
+    outletDrops.push(drop);
   }
 
   function makePack(id) {
@@ -383,6 +431,7 @@
 
   function setExploded() {
     assembled = false;
+    installed = false;
     productRoot.rotation.set(0, 0, 0);
     setOilHeight(0);
     water.visible = false;
@@ -397,6 +446,12 @@
     inletFlowMat.opacity = 0;
     oilFlowDrops.forEach((drop) => { drop.visible = false; });
     oilFlowMat.opacity = 0;
+    outletFlow.visible = false;
+    outletFlowMat.opacity = 0;
+    outletDrops.forEach((drop) => { drop.visible = false; drop.material.opacity = 0; });
+    installContext.visible = false;
+    floor.visible = true;
+    productRoot.position.set(0, -0.05, 0);
     bubbles.forEach((bubble) => { bubble.visible = false; });
     chamber.position.set(-2.4, 0.65, -0.25);
     bottomCap.position.set(-0.75, -3.0, 0.15);
@@ -451,9 +506,11 @@
   function resetModelFocus() {
     modelFocusedId = null;
     if (cameraTween) cameraTween.kill();
+    const homePosition = installed ? installCameraPosition : baseCameraPosition;
+    const homeTarget = installed ? installCameraTarget : new THREE.Vector3(0, -0.18, 0);
     cameraTween = gsap.timeline();
-    cameraTween.to(camera.position, { x: baseCameraPosition.x, y: baseCameraPosition.y, z: baseCameraPosition.z, duration: 0.7, ease: 'power2.inOut', onUpdate: () => camera.lookAt(cameraTarget) });
-    cameraTween.to(cameraTarget, { x: 0, y: -0.18, z: 0, duration: 0.7, ease: 'power2.inOut', onUpdate: () => camera.lookAt(cameraTarget) }, '<');
+    cameraTween.to(camera.position, { x: homePosition.x, y: homePosition.y, z: homePosition.z, duration: 0.7, ease: 'power2.inOut', onUpdate: () => camera.lookAt(cameraTarget) });
+    cameraTween.to(cameraTarget, { x: homeTarget.x, y: homeTarget.y, z: homeTarget.z, duration: 0.7, ease: 'power2.inOut', onUpdate: () => camera.lookAt(cameraTarget) }, '<');
     setZoom(50);
     selectedId = null;
     if ($('modelDetailContent')) $('modelDetailContent').hidden = true;
@@ -466,6 +523,12 @@
     if (assemblyTimeline) assemblyTimeline.kill();
     if (rotationTween) rotationTween.pause();
     setExploded();
+    $('pageTitle').textContent = 'Your filter, assembled in 3D.';
+    $('pageSubTitle').textContent = 'Drag to rotate. Select a component to focus and inspect its material.';
+    camera.position.copy(baseCameraPosition);
+    cameraTarget.set(0, -0.18, 0);
+    camera.lookAt(cameraTarget);
+    setZoom(50);
     $('replaceButton').disabled = true;
     $('replayButton').disabled = true;
     $('oilPosition').disabled = true;
@@ -478,7 +541,7 @@
       $('replayButton').disabled = false;
       $('oilPosition').disabled = false;
       $('oilBiocharButton').disabled = false;
-      updateStatus('Assembly complete · Ready to use');
+      updateStatus(installed ? 'Running · Water-oil mix in · Filtered water out' : 'Assembly complete · Ready to use');
       updateProgress(100);
       paintDetails(selectedId);
       if (autoRotate && rotationTween) rotationTween.resume();
@@ -496,7 +559,19 @@
     step('Closing the removable top cap', topCap.position, { x: 0, y: 1.53, z: 0 }, 84);
     timeline.to(productRoot.rotation, { y: 0.12, duration: 0.75, ease: 'power2.inOut' });
     timeline.call(() => {
-      updateStatus('Filling the assembled chamber with water and a thin oil layer');
+      updateStatus('Moving the assembled filter beneath the sink');
+      $('pageTitle').textContent = 'Installed beneath the sink.';
+      $('pageSubTitle').textContent = 'Water-oil mix enters through the upper pipe; filtered water leaves below.';
+      installed = true;
+      installContext.visible = true;
+      floor.visible = false;
+      if (cameraTween) cameraTween.kill();
+    });
+    timeline.to(productRoot.position, { x: 0.45, y: -0.92, duration: 1.28, ease: 'power3.inOut' });
+    timeline.to(camera.position, { x: installCameraPosition.x, y: installCameraPosition.y, z: installCameraPosition.z, duration: 1.28, ease: 'power3.inOut', onUpdate: () => camera.lookAt(cameraTarget) }, '<');
+    timeline.to(cameraTarget, { x: installCameraTarget.x, y: installCameraTarget.y, z: installCameraTarget.z, duration: 1.28, ease: 'power3.inOut', onUpdate: () => camera.lookAt(cameraTarget) }, '<');
+    timeline.call(() => {
+      updateStatus('Water and oil enter through the upper PVC pipe');
       water.visible = true;
       water.scale.y = 0.001;
       water.position.y = 0.669;
@@ -509,6 +584,8 @@
       bubbles.forEach((bubble) => { bubble.visible = true; });
       inletFlow.visible = true;
       oilFlowDrops.forEach((drop) => { drop.visible = true; });
+      outletFlow.visible = true;
+      outletDrops.forEach((drop) => { drop.visible = true; });
     });
     timeline.to(water.scale, { y: 1, duration: 1.45, ease: 'power1.inOut' });
     timeline.to(water.position, { y: -0.28, duration: 1.45, ease: 'power1.inOut' }, '<');
@@ -517,6 +594,10 @@
     timeline.call(() => bubbles.forEach((bubble) => { bubble.visible = true; }));
     timeline.to(oilMat, { opacity: 0.94, duration: 0.7, ease: 'power1.out' }, '-=0.35');
     timeline.to(oilSurfaceMat, { opacity: 0.94, duration: 0.7, ease: 'power1.out' }, '<');
+    timeline.call(() => updateStatus('Filtered water exits through the lower PVC pipe'));
+    timeline.to(outletFlowMat, { opacity: 0.92, duration: 0.7, ease: 'power1.out' });
+    timeline.to(outletDrops.map((drop) => drop.material), { opacity: 0.96, duration: 0.55, ease: 'power1.out' }, '<');
+    timeline.call(() => { updateStatus('Running · Water-oil mix in · Filtered water out'); updateProgress(100); });
   }
 
   function animateReplacement() {
@@ -527,6 +608,9 @@
     inletFlowMat.opacity = 0;
     oilFlowMat.opacity = 0;
     oilFlowDrops.forEach((drop) => { drop.visible = false; });
+    outletFlow.visible = false;
+    outletFlowMat.opacity = 0;
+    outletDrops.forEach((drop) => { drop.visible = false; drop.material.opacity = 0; });
     const usedPack = activePack;
     const usedCord = activeCord;
     const newPack = sparePack;
@@ -725,6 +809,10 @@
       oilFlowDrops.forEach((drop, index) => {
         const progress = (flowTime * 0.18 + index / oilFlowDrops.length) % 1;
         drop.position.copy(flowCurve.getPointAt(progress));
+      });
+      outletDrops.forEach((drop, index) => {
+        const progress = (flowTime * 0.24 + index / outletDrops.length) % 1;
+        drop.position.copy(outletFlowCurve.getPointAt(progress));
       });
     }
     renderer.render(scene, camera);
