@@ -104,7 +104,7 @@
 
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color('#17392b');
+  scene.background = new THREE.Color('#A5D6A7');
   const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 80);
   const baseCameraPosition = new THREE.Vector3(4.6, 2.4, 8.7);
   const cameraTarget = new THREE.Vector3(0, -0.18, 0);
@@ -134,7 +134,7 @@
   fill.position.set(5, 2, -4);
   scene.add(fill);
 
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(3.1, 64), new THREE.MeshStandardMaterial({ color: '#28513a', roughness: 0.9 }));
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(3.1, 64), new THREE.MeshStandardMaterial({ color: '#A5D6A7', roughness: 0.9 }));
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = -2.18;
   floor.receiveShadow = true;
