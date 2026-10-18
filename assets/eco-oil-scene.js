@@ -583,6 +583,7 @@
       $('pageTitle').textContent = 'Installed beneath the sink.';
       $('pageSubTitle').textContent = 'Water-oil mix enters above; filtered water flows from the lower PVC into the underground drain.';
       installed = true;
+      setAutoRotation(false);
       installContext.visible = true;
       floor.visible = false;
       if (cameraTween) cameraTween.kill();
