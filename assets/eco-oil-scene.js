@@ -254,7 +254,7 @@
   waterSurface.visible = false;
   const waterRippleMat = new THREE.MeshStandardMaterial({ color: '#9ac9df', roughness: 0.28, transparent: true, opacity: 0, depthWrite: false });
   const waterRipple = torusAt(chamber, 0.16, 0.004, 0, waterRippleMat, 'chamber');
-  waterRipple.position.x = -0.12;
+  waterRipple.position.x = 0.065;
   waterRipple.position.z = 0.08;
   waterRipple.visible = false;
   const oil = addMesh(chamber, new THREE.CylinderGeometry(0.617, 0.617, 0.105, 48, 1, false), oilMat, 'chamber');
@@ -329,13 +329,13 @@
   const inletFlowMat = new THREE.MeshPhysicalMaterial({ color: '#034770', roughness: 0.12, transparent: true, opacity: 0, transmission: 0.04, side: THREE.DoubleSide, depthWrite: false });
   const inletFlow = addMesh(inlet, new THREE.TubeGeometry(flowCurve, 64, 0.087, 16, false), inletFlowMat, 'inlet');
   inletFlow.visible = false;
-  const tankFlowPoints = [[-0.63, 0.38, 0.08], [-0.53, 0.375, 0.08], [-0.41, 0.33, 0.08], [-0.29, 0.24, 0.08], [-0.2, 0.12, 0.08], [-0.15, 0.025, 0.08]];
+  const tankFlowPoints = [[-0.63, 0.38, 0.08], [-0.47, 0.37, 0.08], [-0.29, 0.32, 0.08], [-0.12, 0.22, 0.08], [0.015, 0.075, 0.08], [0.075, -0.055, 0.08]];
   const tankFlowCurve = new THREE.CatmullRomCurve3(tankFlowPoints.map((point) => new THREE.Vector3(...point)), false, 'centripetal');
-  const tankFlowMat = new THREE.MeshPhysicalMaterial({ color: '#034770', roughness: 0.24, transparent: true, opacity: 0, transmission: 0.015, side: THREE.DoubleSide, depthWrite: false, emissive: '#034770', emissiveIntensity: 0.018 });
-  const tankFlow = addMesh(chamber, taperedTube(tankFlowCurve, 56, 0.052, 14, 0.14), tankFlowMat, 'chamber');
+  const tankFlowMat = new THREE.MeshPhysicalMaterial({ color: '#034770', roughness: 0.28, transparent: true, opacity: 0, transmission: 0, side: THREE.DoubleSide, depthWrite: false, emissive: '#034770', emissiveIntensity: 0.018 });
+  const tankFlow = addMesh(chamber, taperedTube(tankFlowCurve, 64, 0.078, 16, 0.78), tankFlowMat, 'chamber');
   tankFlow.visible = false;
   const tankFlowSheenMat = new THREE.MeshStandardMaterial({ color: '#b6d9e8', roughness: 0.34, transparent: true, opacity: 0, depthWrite: false, emissive: '#2788b1', emissiveIntensity: 0.018 });
-  const tankFlowSheen = addMesh(chamber, taperedTube(tankFlowCurve, 56, 0.005, 8, 0.1), tankFlowSheenMat, 'chamber');
+  const tankFlowSheen = addMesh(chamber, taperedTube(tankFlowCurve, 64, 0.006, 8, 0.62), tankFlowSheenMat, 'chamber');
   tankFlowSheen.visible = false;
   const tankFlowBeadMat = new THREE.MeshStandardMaterial({ color: '#b9eafa', roughness: 0.2, transparent: true, opacity: 0, depthWrite: false, emissive: '#55bce0', emissiveIntensity: 0.04 });
   const tankFlowBeads = [];
@@ -352,7 +352,15 @@
     const drop = addMesh(inlet, new THREE.SphereGeometry(0.031 + (i % 2) * 0.009, 12, 10), oilFlowMat, 'inlet');
     drop.visible = false;
     oilFlowDrops.push(drop);
-  }  const outletFlowCurve = new THREE.CatmullRomCurve3(outletPoints.map((point) => new THREE.Vector3(point[0], point[1], point[2] + 0.035)), false, 'centripetal');
+  }
+  const streamOilDrops = [];
+  for (let i = 0; i < 3; i++) {
+    const drop = addMesh(chamber, new THREE.SphereGeometry(0.014, 12, 10), oilFlowMat, 'chamber');
+    drop.scale.set(0.78, 1.25, 0.78);
+    drop.visible = false;
+    streamOilDrops.push(drop);
+  }
+  const outletFlowCurve = new THREE.CatmullRomCurve3(outletPoints.map((point) => new THREE.Vector3(point[0], point[1], point[2] + 0.035)), false, 'centripetal');
   const outletFlowMat = new THREE.MeshPhysicalMaterial({ color: '#034770', roughness: 0.1, transparent: true, opacity: 0, transmission: 0.04, side: THREE.DoubleSide, depthWrite: false });
   const outletFlow = addMesh(outlet, new THREE.TubeGeometry(outletFlowCurve, 48, 0.074, 14, false), outletFlowMat, 'outlet');
   outletFlow.visible = false;
@@ -513,6 +521,7 @@
     tankFlowSheenMat.opacity = 0;
     tankFlowBeads.forEach((bead) => { bead.visible = false; });
     oilFlowDrops.forEach((drop) => { drop.visible = false; });
+    streamOilDrops.forEach((drop) => { drop.visible = false; });
     oilFlowMat.opacity = 0;
     outletFlow.visible = false;
     outletFlowMat.opacity = 0;
@@ -671,6 +680,7 @@
       tankFlowSheen.visible = true;
       tankFlowBeads.forEach((bead) => { bead.visible = true; });
       oilFlowDrops.forEach((drop) => { drop.visible = true; });
+      streamOilDrops.forEach((drop) => { drop.visible = true; });
       outletFlow.visible = false;
       outletFlowMat.opacity = 0;
       outletDrops.forEach((drop) => { drop.visible = false; });
@@ -680,7 +690,7 @@
       syncWaterGeometry();
     });
     timeline.to(inletFlowMat, { opacity: 0.82, duration: 1.25, ease: 'power1.inOut' });
-    timeline.to(tankFlowMat, { opacity: 0.56, duration: 1.35, ease: 'power1.inOut' }, '<+=0.3');
+    timeline.to(tankFlowMat, { opacity: 0.96, duration: 1.35, ease: 'power1.inOut' }, '<+=0.3');
     timeline.to(tankFlowSheenMat, { opacity: 0.13, duration: 1.35, ease: 'power1.inOut' }, '<');
     timeline.to(tankFlowBeadMat, { opacity: 0.24, duration: 0.8, ease: 'power1.out' }, '<+=0.2');
     timeline.to(waterSurfaceMat, { opacity: 0.42, duration: 1.2, ease: 'power1.out' }, '<');
@@ -711,6 +721,7 @@
       tankFlowSheen.visible = false;
       tankFlowBeads.forEach((bead) => { bead.visible = false; });
       oilFlowDrops.forEach((drop) => { drop.visible = false; });
+    streamOilDrops.forEach((drop) => { drop.visible = false; });
     }, null, '<+=0.73');
     timeline.call(() => updateStatus('Running · Grease captured in the pack · Water draining underground'));
   }
@@ -728,6 +739,7 @@
     tankFlowBeads.forEach((bead) => { bead.visible = false; });
     oilFlowMat.opacity = 0;
     oilFlowDrops.forEach((drop) => { drop.visible = false; });
+    streamOilDrops.forEach((drop) => { drop.visible = false; });
     outletFlow.visible = false;
     outletFlowMat.opacity = 0;
     undergroundFlow.visible = false;
@@ -935,6 +947,10 @@
       tankFlowBeads.forEach((bead, index) => {
         const progress = (flowTime * 0.14 + index / tankFlowBeads.length) % 1;
         bead.position.copy(tankFlowCurve.getPointAt(progress));
+      });
+      streamOilDrops.forEach((drop, index) => {
+        const progress = (flowTime * 0.11 + index / streamOilDrops.length) % 1;
+        drop.position.copy(tankFlowCurve.getPointAt(progress));
       });
     }
     if (waterRipple.visible) {
