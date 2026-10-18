@@ -624,15 +624,25 @@
       replaced = true;
       $('replaceButton').disabled = false;
       $('replayButton').disabled = false;
-      $('oilPosition').disabled = false;
-      $('oilBiocharButton').disabled = false;
-      updateStatus('Fresh material pack installed · Day 0');
+      $('oilPosition').disabled = true;
+      $('oilBiocharButton').disabled = true;
+      updateStatus('Fresh material pack installed · Tank empty');
       updateProgress(100);
     } });
     replaceTimeline = timeline;
     updateStatus('Opening the cap · Two weeks later');
     updateProgress(0);
     timeline.to(topCap.position, { y: 2.18, duration: 0.78, ease: 'power2.out' });
+    timeline.to(waterMat, { opacity: 0, duration: 0.38, ease: 'power2.out' }, '<');
+    timeline.to(oilMat, { opacity: 0, duration: 0.38, ease: 'power2.out' }, '<');
+    timeline.to(oilSurfaceMat, { opacity: 0, duration: 0.38, ease: 'power2.out' }, '<');
+    timeline.to({}, { duration: 0.02 }).call(() => {
+      water.visible = false;
+      oil.visible = false;
+      oilSurface.visible = false;
+      bubbles.forEach((bubble) => { bubble.visible = false; });
+      updateStatus('Tank drained · Removing the used material pack');
+    });
     timeline.call(() => { hand.visible = true; hand.position.set(0.2, 1.37, 0.38); updateCord(usedCord, usedPack, hand, true); updateStatus('Pulling the cotton string to lift the used pack'); });
     timeline.to(usedPack.position, { y: 1.52, duration: 1.42, ease: 'power2.inOut', onUpdate: () => updateCord(usedCord, usedPack, hand, true) }, '<');
     timeline.to(hand.position, { y: 2.42, duration: 1.42, ease: 'power2.inOut', onUpdate: () => updateCord(usedCord, usedPack, hand, true) }, '<');
