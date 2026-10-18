@@ -146,7 +146,7 @@
 
   const plastic = new THREE.MeshStandardMaterial({ color: '#f4f3ed', roughness: 0.32, metalness: 0.02 });
   const glass = new THREE.MeshPhysicalMaterial({ color: '#aac8d4', roughness: 0.13, metalness: 0.035, transparent: true, opacity: 0.4, side: THREE.DoubleSide, depthWrite: false, transmission: 0.08 });
-  const pvc = new THREE.MeshPhysicalMaterial({ color: '#9cb9cb', roughness: 0.14, metalness: 0.06, transparent: true, opacity: 0.73, side: THREE.DoubleSide, depthWrite: false });
+  const pvc = new THREE.MeshPhysicalMaterial({ color: '#819aaa', roughness: 0.14, metalness: 0.06, transparent: true, opacity: 0.56, side: THREE.DoubleSide, depthWrite: false });
   const waterMat = new THREE.MeshPhysicalMaterial({ color: '#4dadd4', roughness: 0.12, transparent: true, opacity: 0.65, transmission: 0.06, side: THREE.DoubleSide, depthWrite: false });
   const oilMat = new THREE.MeshPhysicalMaterial({ color: '#e5a91d', roughness: 0.15, transparent: true, opacity: 0.94, metalness: 0.08, side: THREE.DoubleSide, depthWrite: false });
   const clothMat = new THREE.MeshStandardMaterial({ color: '#eee8df', roughness: 0.92, transparent: true, opacity: 0.73, side: THREE.DoubleSide, depthWrite: false });
@@ -253,13 +253,18 @@
   const inlet = inletGeometry.pipe;
   const outlet = makePipe('outlet', [[0, -1.42, 0], [0, -1.83, 0], [0.16, -2.0, 0], [1.14, -2.0, 0]]).pipe;
 
-  const inletFlowMat = new THREE.MeshPhysicalMaterial({ color: '#57bce4', roughness: 0.12, transparent: true, opacity: 0, transmission: 0.04, side: THREE.DoubleSide, depthWrite: false });
-  const inletFlow = addMesh(inlet, new THREE.TubeGeometry(inletGeometry.curve, 64, 0.079, 16, false), inletFlowMat, 'inlet');
+  const flowCurve = new THREE.CatmullRomCurve3(
+    [[-1.62, 0.84, 0.035], [-1.62, 0.48, 0.035], [-1.52, 0.38, 0.035], [-0.58, 0.38, 0.035]].map((point) => new THREE.Vector3(...point)),
+    false,
+    'centripetal'
+  );
+  const inletFlowMat = new THREE.MeshPhysicalMaterial({ color: '#35b7e8', roughness: 0.12, transparent: true, opacity: 0, transmission: 0.04, side: THREE.DoubleSide, depthWrite: false });
+  const inletFlow = addMesh(inlet, new THREE.TubeGeometry(flowCurve, 64, 0.087, 16, false), inletFlowMat, 'inlet');
   inletFlow.visible = false;
-  const oilFlowMat = new THREE.MeshStandardMaterial({ color: '#f0aa22', roughness: 0.14, metalness: 0.03, transparent: true, opacity: 0, depthWrite: false });
+  const oilFlowMat = new THREE.MeshStandardMaterial({ color: '#ffc22f', roughness: 0.14, metalness: 0.03, transparent: true, opacity: 0, depthWrite: false });
   const oilFlowDrops = [];
   for (let i = 0; i < 5; i++) {
-    const drop = addMesh(inlet, new THREE.SphereGeometry(0.042 + (i % 2) * 0.009, 14, 10), oilFlowMat, 'inlet');
+    const drop = addMesh(inlet, new THREE.SphereGeometry(0.047 + (i % 2) * 0.008, 14, 10), oilFlowMat, 'inlet');
     drop.visible = false;
     oilFlowDrops.push(drop);
   }
@@ -714,7 +719,7 @@
       const flowTime = flowClock.getElapsedTime();
       oilFlowDrops.forEach((drop, index) => {
         const progress = (flowTime * 0.18 + index / oilFlowDrops.length) % 1;
-        drop.position.copy(inletGeometry.curve.getPointAt(progress));
+        drop.position.copy(flowCurve.getPointAt(progress));
       });
     }
     renderer.render(scene, camera);
