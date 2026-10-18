@@ -400,6 +400,9 @@
     ends.forEach((point, index) => {
       // The sink drain overlaps this inlet end, so omit the open-end collar at the joint.
       if (id === 'inlet' && index === 0) return;
+      // The installed drain continues directly from this outlet end. Keep that elbow smooth
+      // by hiding the exposed lip at the shared junction.
+      if (id === 'outlet' && index === 1) return;
       const direction = index === 0
         ? new THREE.Vector3(...points[1]).sub(new THREE.Vector3(...points[0])).normalize()
         : new THREE.Vector3(...points[points.length - 1]).sub(new THREE.Vector3(...points[points.length - 2])).normalize();
@@ -462,7 +465,9 @@
   const outletFlowMat = new THREE.MeshPhysicalMaterial({ color: '#034770', roughness: 0.1, transparent: true, opacity: 0, transmission: 0.04, side: THREE.DoubleSide, depthWrite: false });
   const outletFlow = addMesh(outlet, new THREE.TubeGeometry(outletFlowCurve, 48, 0.074, 14, false), outletFlowMat, 'outlet');
   outletFlow.visible = false;
-  const installOutletPoints = [[1.14, -2.0, 0], [1.14, -2.18, 0], [1.14, -3.2, 0], [1.2, -3.42, 0.06], [1.38, -3.5, 0.12], [2.68, -3.5, 0.12]];
+  // Start the installed drain a little inside the outlet elbow so the two PVC runs overlap
+  // instead of meeting as two flat, visibly separate ends.
+  const installOutletPoints = [[0.94, -2.0, 0], [1.14, -2.0, 0], [1.14, -2.18, 0], [1.14, -3.2, 0], [1.2, -3.42, 0.06], [1.38, -3.5, 0.12], [2.68, -3.5, 0.12]];
   const installOutletCurve = new THREE.CatmullRomCurve3(installOutletPoints.map((point) => new THREE.Vector3(...point)), false, 'centripetal');
   const installOutletPipe = new THREE.Mesh(new THREE.TubeGeometry(installOutletCurve, 56, 0.135, 16, false), pvc);
   installOutletPipe.castShadow = true;
@@ -917,6 +922,11 @@
   }
 
   $('replayButton').addEventListener('click', () => { assembled = false; replaced = false; animateAssembly(); });
+  document.addEventListener('eco-oil:reset-animation', () => {
+    assembled = false;
+    replaced = false;
+    animateAssembly();
+  });
   $('replaceButton').addEventListener('click', animateReplacement);
   $('backButton').addEventListener('click', (event) => {
     event.preventDefault();
