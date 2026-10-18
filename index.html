@@ -29,10 +29,25 @@
 .zoom-control button:hover{background:#315c49;color:#fff}
 @media(max-width:600px){.zoom-control{gap:6px}.zoom-control input{width:min(180px,38vw)}}
 @media(max-width:600px){.kit-stage{aspect-ratio:1.5}}
+.about-hero{position:relative;min-height:min(850px,100svh);min-height:min(850px,100vh);display:grid;place-items:center;overflow:hidden;isolation:isolate;background:#183b2b;padding:52px 24px}
+.about-backdrop{position:absolute;inset:-3%;z-index:-2;display:grid;place-items:center;overflow:hidden}
+.about-backdrop img{width:min(1120px,100%);height:100%;object-fit:contain;filter:blur(5px);opacity:.7;transform:scale(1.04)}
+.about-veil{position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,#102d22a6,#14342685 45%,#102d22c9)}
+.about-content{width:min(780px,100%);display:flex;align-items:center;flex-direction:column;text-align:center;color:#fff;padding:clamp(30px,6vw,66px);border:1px solid #ffffff40;border-radius:24px;background:#153827bd;box-shadow:0 24px 80px #071a1280;backdrop-filter:blur(12px)}
+.about-logo{width:clamp(250px,38vw,440px);max-width:100%;height:auto;display:block;filter:drop-shadow(0 8px 20px #08170c55)}
+.about-kicker{margin:26px 0 14px;color:#d4e1d0;font:500 11px 'DM Mono';letter-spacing:.2em;text-transform:uppercase}
+.about-copy{max-width:650px;margin:0;color:#f5f5ef;font:400 clamp(17px,2vw,21px)/1.65 'DM Sans',sans-serif;text-wrap:pretty}
+.about-cta{margin-top:30px;min-width:190px;padding:15px 22px;border:1px solid #f3f3e8;border-radius:999px;background:#f6f5eb;color:#183b2b;text-decoration:none;font:700 13px Manrope;transition:transform .18s ease,background .18s ease}
+.about-cta:hover{background:#fff;transform:translateY(-2px)}
+.about-cta:focus-visible{outline:3px solid #d9e59a;outline-offset:4px}
+.topbar{scroll-margin-top:12px}
+@media(max-width:600px){.about-hero{min-height:92vh;min-height:92svh;padding:22px 16px}.about-backdrop img{width:145%;max-width:none;opacity:.56}.about-content{padding:34px 22px;border-radius:18px}.about-logo{width:min(300px,84vw)}.about-kicker{margin-top:22px;font-size:9px}.about-copy{font-size:16px;line-height:1.58}.about-cta{margin-top:24px}}
+@media(prefers-reduced-motion:reduce){.about-cta{transition:none}}
 </style>
 </head>
 <body>
-<header class="shell topbar"><a class="brand" href="#kit" aria-label="Eco Oil home"><img src="assets/eco-oil-logo-enhanced.png" alt="Eco Oil"></a><nav class="nav" aria-label="Main navigation"><a href="#kit">Explore kit</a><a href="#product" id="navProduct">3D product</a></nav><div class="serial">ECO OIL&nbsp; / &nbsp;FILTER KIT</div></header>
+<section class="about-hero" id="about" aria-labelledby="aboutTitle"><div class="about-backdrop" aria-hidden="true"><img src="assets/open-kit-transparent.png" alt=""></div><div class="about-veil" aria-hidden="true"></div><div class="about-content"><img class="about-logo" src="assets/eco-oil-logo-enhanced.png" alt="Eco Oil"><h1 class="about-kicker" id="aboutTitle">About Eco Oil</h1><p class="about-copy">A low-cost, modular filter tank that uses coconut fiber and biochar to capture household kitchen grease at the source, preventing sewer blockages and river pollution without using chemicals.</p><a class="about-cta" href="#kitView">Explore the kit <span aria-hidden="true">↘</span></a></div></section>
+<header class="shell topbar"><a class="brand" href="#about" aria-label="Eco Oil home"><img src="assets/eco-oil-logo-enhanced.png" alt="Eco Oil"></a><nav class="nav" aria-label="Main navigation"><a href="#kitView">Explore kit</a><a href="#productView" id="navProduct">3D product</a></nav><div class="serial">ECO OIL&nbsp; / &nbsp;FILTER KIT</div></header>
 <main class="shell">
 <section id="kitView">
 <div class="intro"><div><div class="eyebrow">Build your own clean-water system</div><h1>Everything in the box.</h1><p>Select a component to focus it and view its materials.</p></div><div class="stepbar" aria-label="Step one of two"><span class="step-dot current">01</span><span>Explore</span><i class="step-line"></i><span class="step-dot">02</span><span>Assemble</span></div></div>
