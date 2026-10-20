@@ -1097,14 +1097,51 @@
   let lastRenderTime = 0;
   const frameInterval = touchDevice ? 1000 / 60 - 1.5 : 0; // tolerance so vsync jitter does not skip frames
   let frameTimeSum = 0, frameTimeCount = 0, goodWindows = 0;
-  const fpsBadge = /[?&]fps\b/.test(location.search) ? document.createElement('div') : null;
+  // ---- On-screen diagnostics (visible by default while we tune iPad performance; add ?nodebug to the URL to hide) ----
+  let adaptDisabled = false, frameTimeMax = 0, rafPerSec = 0, lastStats = null, transparentHidden = false;
+  const fpsBadge = /[?&]nodebug\b/.test(location.search) ? null : document.createElement('div');
   if (fpsBadge) {
-    fpsBadge.style.cssText = 'position:absolute;left:8px;top:48px;z-index:50;padding:4px 7px;border-radius:6px;background:#000a;color:#fff;font:11px/1.3 monospace;pointer-events:none';
+    fpsBadge.style.cssText = 'position:absolute;left:50%;transform:translateX(-50%);top:56px;z-index:50;padding:6px 8px;border-radius:8px;background:#000c;color:#fff;font:11px/1.35 monospace;pointer-events:none;text-align:center;max-width:92%';
+    fpsBadge.innerHTML = '<div class="dbg-text">measuring…</div><div class="dbg-btns" style="margin-top:5px;display:flex;gap:5px;justify-content:center;flex-wrap:wrap"></div>';
+    const btns = fpsBadge.querySelector('.dbg-btns');
+    const addBtn = (label, handler) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = label;
+      b.style.cssText = 'pointer-events:auto;font:600 11px monospace;padding:6px 9px;border-radius:6px;border:1px solid #fff8;background:#fff2;color:#fff';
+      b.addEventListener('click', (e) => { e.stopPropagation(); handler(); });
+      btns.appendChild(b);
+    };
+    [['Res 100%', 1], ['Res 70%', 0.7], ['Res 50%', 0.5], ['Auto', 0]].forEach(([label, value]) => addBtn(label, () => {
+      adaptDisabled = value > 0; qualityScale = value > 0 ? value : 1; goodWindows = 0; lastRenderTime = 0; frameTimeSum = 0; frameTimeCount = 0; frameTimeMax = 0; resizeRenderer();
+    }));
+    addBtn('Transparent on/off', () => {
+      transparentHidden = !transparentHidden;
+      scene.traverse((o) => { if (o.isMesh && o.material) [].concat(o.material).forEach((m) => { if (m.transparent) m.visible = !transparentHidden; }); });
+      frameTimeSum = 0; frameTimeCount = 0; frameTimeMax = 0;
+    });
     stage.appendChild(fpsBadge);
+    // raw requestAnimationFrame rate, independent of the WebGL render loop (shows if the page itself is being throttled)
+    let rafCount = 0, rafStart = performance.now();
+    (function rafProbe(t) {
+      rafCount++;
+      if (t - rafStart >= 1000) { rafPerSec = Math.round(rafCount * 1000 / (t - rafStart)); rafCount = 0; rafStart = t; updateBadge(); }
+      requestAnimationFrame(rafProbe);
+    })(performance.now());
+  }
+  function updateBadge() {
+    if (!fpsBadge) return;
+    const info = renderer.info.render;
+    const avg = lastStats ? lastStats.avg : 0;
+    fpsBadge.querySelector('.dbg-text').textContent =
+      `${stageIsFullscreen() ? 'FS · ' : ''}render ${avg ? (1000 / avg).toFixed(0) : '–'} fps (avg ${avg.toFixed(0)}ms, max ${frameTimeMax.toFixed(0)}ms) · rAF ${rafPerSec}/s\n` +
+      `ratio ${renderer.getPixelRatio().toFixed(2)} · ${renderer.domElement.width}x${renderer.domElement.height} · calls ${info.calls} · tris ${(info.triangles / 1000).toFixed(0)}k · q ${qualityScale.toFixed(2)}${adaptDisabled ? ' (manual)' : ''}${transparentHidden ? ' · transparent OFF' : ''}`;
+    fpsBadge.querySelector('.dbg-text').style.whiteSpace = 'pre-line';
   }
   function adaptQuality(avgMs) {
-    if (fpsBadge) fpsBadge.textContent = `${stageIsFullscreen() ? 'FS ' : ''}${(1000 / avgMs).toFixed(0)} fps · ratio ${renderer.getPixelRatio().toFixed(2)} · ${renderer.domElement.width}x${renderer.domElement.height}`;
-    if (!touchDevice) return;
+    lastStats = { avg: avgMs };
+    updateBadge();
+    frameTimeMax = 0;
+    if (!touchDevice || adaptDisabled) return;
     if (avgMs > 25 && qualityScale > 0.55) {
       qualityScale = Math.max(0.55, qualityScale * (avgMs > 45 ? 0.7 : 0.85));
       goodWindows = 0;
@@ -1126,6 +1163,7 @@
     const frameDelta = now - lastRenderTime;
     if (lastRenderTime && frameDelta < 250) {
       frameTimeSum += frameDelta;
+      if (frameDelta > frameTimeMax) frameTimeMax = frameDelta;
       if (++frameTimeCount >= 20) { adaptQuality(frameTimeSum / frameTimeCount); frameTimeSum = 0; frameTimeCount = 0; }
     }
     lastRenderTime = now;
