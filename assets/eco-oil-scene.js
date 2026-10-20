@@ -252,10 +252,10 @@
   // three r149 renders an extra MSAA + mipmapped transmission pass every frame when any material has transmission > 0.
   // The values used here are 1-4%, which is visually negligible, so skip it on touch devices (iPad).
   const transmissionAmount = () => 0; // same on every device: skips the per-frame transmission pass
-  const MAX_RENDER_PIXELS = 2200000; // pixel budget for touch devices so fullscreen does not blow up the fill rate
+  const MAX_RENDER_PIXELS = 1500000; // pixel budget for touch devices so fullscreen does not blow up the fill rate
   let qualityScale = 1; // lowered automatically on touch devices when the frame rate drops
   function targetPixelRatio(width, height) {
-    const cap = lowPowerMode ? 1.1 : 1.6;
+    const cap = (lowPowerMode || touchDevice) ? 1.1 : 1.6; // touch screens are 2-3x DPR: keep the GPU load of the original build
     let ratio = Math.min(window.devicePixelRatio || 1, cap);
     if (touchDevice) ratio = Math.min(ratio, Math.sqrt(MAX_RENDER_PIXELS / Math.max(1, width * height))) * qualityScale;
     return Math.max(0.5, ratio);
@@ -1103,14 +1103,14 @@
     stage.appendChild(fpsBadge);
   }
   function adaptQuality(avgMs) {
-    if (fpsBadge) fpsBadge.textContent = `${(1000 / avgMs).toFixed(0)} fps · ratio ${renderer.getPixelRatio().toFixed(2)} · ${renderer.domElement.width}x${renderer.domElement.height}`;
+    if (fpsBadge) fpsBadge.textContent = `${stageIsFullscreen() ? 'FS ' : ''}${(1000 / avgMs).toFixed(0)} fps · ratio ${renderer.getPixelRatio().toFixed(2)} · ${renderer.domElement.width}x${renderer.domElement.height}`;
     if (!touchDevice) return;
-    if (avgMs > 25 && qualityScale > 0.6) {
-      qualityScale = Math.max(0.6, qualityScale * 0.85);
+    if (avgMs > 25 && qualityScale > 0.55) {
+      qualityScale = Math.max(0.55, qualityScale * (avgMs > 45 ? 0.7 : 0.85));
       goodWindows = 0;
       resizeRenderer();
     } else if (avgMs < 18.5 && qualityScale < 1) {
-      if (++goodWindows >= 4) { qualityScale = Math.min(1, qualityScale * 1.1); goodWindows = 0; resizeRenderer(); }
+      if (++goodWindows >= 8) { qualityScale = Math.min(1, qualityScale * 1.1); goodWindows = 0; resizeRenderer(); }
     } else {
       goodWindows = 0;
     }
@@ -1118,7 +1118,7 @@
   const flowClock = new THREE.Clock();
   function render(now = 0) {
     renderFrame = 0;
-    if (!productInView || document.visibilityState === 'hidden') return;
+    if (!(productInView || stageIsFullscreen()) || document.visibilityState === 'hidden') return;
     if (frameInterval && now - lastRenderTime < frameInterval) {
       renderFrame = requestAnimationFrame(render);
       return;
@@ -1126,7 +1126,7 @@
     const frameDelta = now - lastRenderTime;
     if (lastRenderTime && frameDelta < 250) {
       frameTimeSum += frameDelta;
-      if (++frameTimeCount >= 45) { adaptQuality(frameTimeSum / frameTimeCount); frameTimeSum = 0; frameTimeCount = 0; }
+      if (++frameTimeCount >= 20) { adaptQuality(frameTimeSum / frameTimeCount); frameTimeSum = 0; frameTimeCount = 0; }
     }
     lastRenderTime = now;
     if (hand.visible) {
@@ -1170,7 +1170,18 @@
     renderer.render(scene, camera);
     renderFrame = requestAnimationFrame(render);
   }
-  function startRender() { if (!renderFrame && productInView && document.visibilityState !== 'hidden') render(); }
+  function stageIsFullscreen() {
+    return document.fullscreenElement === stage || document.webkitFullscreenElement === stage || stage.classList.contains('is-faux-fullscreen');
+  }
+  function startRender() { if (!renderFrame && (productInView || stageIsFullscreen()) && document.visibilityState !== 'hidden') render(); }
+  function onStageFullscreenChange() {
+    qualityScale = Math.min(qualityScale, 1);
+    frameTimeSum = 0; frameTimeCount = 0; lastRenderTime = 0;
+    resizeRenderer();
+    startRender();
+  }
+  document.addEventListener('fullscreenchange', onStageFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', onStageFullscreenChange);
   const productVisibilityObserver = new IntersectionObserver(([entry]) => {
     productInView = entry.isIntersecting;
     if (productInView) {
