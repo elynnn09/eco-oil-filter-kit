@@ -537,6 +537,16 @@
   const undergroundDrain = new THREE.Mesh(new THREE.TubeGeometry(undergroundDrainCurve, 24, 0.205, 16, false), drainMat);
   installContext.add(undergroundDrain);
   const undergroundFlowMat = new THREE.MeshPhysicalMaterial({ color: '#034770', roughness: 0.1, transparent: true, opacity: 0, transmission: transmissionAmount(0.04), side: THREE.DoubleSide, depthWrite: false });
+  // three r149 multiplies alpha by (transmissionAlpha + 0.1) (~1.1) whenever transmission > 0. We removed the (costly) transmission pass,
+  // so apply the same +10% alpha directly to keep glass / water / flow exactly as opaque as the original look on every device.
+  function matchTransmissionAlpha(material) {
+    material.onBeforeCompile = (shader) => {
+      shader.fragmentShader = shader.fragmentShader.replace('#include <output_fragment>', '#include <output_fragment>\n\tgl_FragColor.a = min(1.0, gl_FragColor.a * 1.1);');
+    };
+    material.customProgramCacheKey = () => 'alpha110';
+    return material;
+  }
+  [glass, waterMat, inletFlowMat, outletFlowMat, undergroundFlowMat].forEach(matchTransmissionAlpha);
   const undergroundFlow = new THREE.Mesh(new THREE.TubeGeometry(installOutletCurve, 56, 0.074, 14, false), undergroundFlowMat);
   installContext.add(undergroundFlow);
   undergroundFlow.visible = false;
