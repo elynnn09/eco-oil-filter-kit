@@ -243,16 +243,22 @@
   document.addEventListener('eco-oil:kit-opened', startKitTour);
   $('kitTourSkip').addEventListener('click', endKitTour);
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const lowPowerMode = window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(max-width: 768px)').matches;
+  // SAME_LOOK = true: desktop, iPad and phone all render the same 3D look (shadows, pixel ratio cap, materials).
+  // Set it to false to bring back the old reduced look (no shadows, lower resolution) on touch devices for speed.
+  const SAME_LOOK = true;
+  const touchDevice = window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(max-width: 768px)').matches;
+  const lowPowerMode = !SAME_LOOK && touchDevice;
+  const SHADOWS = false; // iPad look: no cast shadows on any device (desktop, iPad, phone)
   // three r149 renders an extra MSAA + mipmapped transmission pass every frame when any material has transmission > 0.
   // The values used here are 1-4%, which is visually negligible, so skip it on touch devices (iPad).
-  const transmissionAmount = (value) => (lowPowerMode ? 0 : value);
-  const MAX_RENDER_PIXELS = 1400000; // pixel budget for touch devices so fullscreen does not blow up the fill rate
+  const transmissionAmount = () => 0; // same on every device: skips the per-frame transmission pass
+  const MAX_RENDER_PIXELS = 2200000; // pixel budget for touch devices so fullscreen does not blow up the fill rate
+  let qualityScale = 1; // lowered automatically on touch devices when the frame rate drops
   function targetPixelRatio(width, height) {
     const cap = lowPowerMode ? 1.1 : 1.6;
     let ratio = Math.min(window.devicePixelRatio || 1, cap);
-    if (lowPowerMode) ratio = Math.min(ratio, Math.sqrt(MAX_RENDER_PIXELS / Math.max(1, width * height)));
-    return Math.max(0.75, ratio);
+    if (touchDevice) ratio = Math.min(ratio, Math.sqrt(MAX_RENDER_PIXELS / Math.max(1, width * height))) * qualityScale;
+    return Math.max(0.5, ratio);
   }
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#B8D8C0');
@@ -268,13 +274,13 @@
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.94;
-  renderer.shadowMap.enabled = !lowPowerMode;
+  renderer.shadowMap.enabled = SHADOWS;
   renderer.shadowMap.type = THREE.PCFShadowMap;
 
   scene.add(new THREE.HemisphereLight('#f8fff9', '#526657', 1.45));
   const key = new THREE.DirectionalLight('#fff8ec', 2.2);
   key.position.set(-4, 7, 6);
-  key.castShadow = !lowPowerMode;
+  key.castShadow = SHADOWS;
   key.shadow.mapSize.set(lowPowerMode ? 512 : 1024, lowPowerMode ? 512 : 1024);
   key.shadow.camera.left = -4;
   key.shadow.camera.right = 4;
@@ -1079,7 +1085,26 @@
   let productInView = false;
   let initialAssemblyStarted = false;
   let lastRenderTime = 0;
-  const frameInterval = lowPowerMode ? 1000 / 30 : 0;
+  const frameInterval = touchDevice ? 1000 / 60 - 1.5 : 0; // tolerance so vsync jitter does not skip frames
+  let frameTimeSum = 0, frameTimeCount = 0, goodWindows = 0;
+  const fpsBadge = /[?&]fps\b/.test(location.search) ? document.createElement('div') : null;
+  if (fpsBadge) {
+    fpsBadge.style.cssText = 'position:absolute;left:8px;top:48px;z-index:50;padding:4px 7px;border-radius:6px;background:#000a;color:#fff;font:11px/1.3 monospace;pointer-events:none';
+    stage.appendChild(fpsBadge);
+  }
+  function adaptQuality(avgMs) {
+    if (fpsBadge) fpsBadge.textContent = `${(1000 / avgMs).toFixed(0)} fps · ratio ${renderer.getPixelRatio().toFixed(2)} · ${renderer.domElement.width}x${renderer.domElement.height}`;
+    if (!touchDevice) return;
+    if (avgMs > 25 && qualityScale > 0.6) {
+      qualityScale = Math.max(0.6, qualityScale * 0.85);
+      goodWindows = 0;
+      resizeRenderer();
+    } else if (avgMs < 18.5 && qualityScale < 1) {
+      if (++goodWindows >= 4) { qualityScale = Math.min(1, qualityScale * 1.1); goodWindows = 0; resizeRenderer(); }
+    } else {
+      goodWindows = 0;
+    }
+  }
   const flowClock = new THREE.Clock();
   function render(now = 0) {
     renderFrame = 0;
@@ -1087,6 +1112,11 @@
     if (frameInterval && now - lastRenderTime < frameInterval) {
       renderFrame = requestAnimationFrame(render);
       return;
+    }
+    const frameDelta = now - lastRenderTime;
+    if (lastRenderTime && frameDelta < 250) {
+      frameTimeSum += frameDelta;
+      if (++frameTimeCount >= 45) { adaptQuality(frameTimeSum / frameTimeCount); frameTimeSum = 0; frameTimeCount = 0; }
     }
     lastRenderTime = now;
     if (hand.visible) {
