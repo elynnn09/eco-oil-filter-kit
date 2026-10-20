@@ -1097,9 +1097,9 @@
   let lastRenderTime = 0;
   const frameInterval = touchDevice ? 1000 / 60 - 1.5 : 0; // tolerance so vsync jitter does not skip frames
   let frameTimeSum = 0, frameTimeCount = 0, goodWindows = 0;
-  // ---- On-screen diagnostics (visible by default while we tune iPad performance; add ?nodebug to the URL to hide) ----
+  // ---- On-screen diagnostics (hidden by default; add ?debug to the URL to show) ----
   let adaptDisabled = false, frameTimeMax = 0, rafPerSec = 0, lastStats = null, transparentHidden = false;
-  const fpsBadge = /[?&]nodebug\b/.test(location.search) ? null : document.createElement('div');
+  const fpsBadge = /[?&]debug\b/.test(location.search) ? document.createElement('div') : null;
   if (fpsBadge) {
     fpsBadge.style.cssText = 'position:absolute;left:50%;transform:translateX(-50%);top:56px;z-index:50;padding:6px 8px;border-radius:8px;background:#000c;color:#fff;font:11px/1.35 monospace;pointer-events:none;text-align:center;max-width:92%';
     fpsBadge.innerHTML = '<div class="dbg-text">measuring…</div><div class="dbg-btns" style="margin-top:5px;display:flex;gap:5px;justify-content:center;flex-wrap:wrap"></div>';
