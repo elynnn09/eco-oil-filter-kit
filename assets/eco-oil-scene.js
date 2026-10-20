@@ -244,6 +244,16 @@
   $('kitTourSkip').addEventListener('click', endKitTour);
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const lowPowerMode = window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(max-width: 768px)').matches;
+  // three r149 renders an extra MSAA + mipmapped transmission pass every frame when any material has transmission > 0.
+  // The values used here are 1-4%, which is visually negligible, so skip it on touch devices (iPad).
+  const transmissionAmount = (value) => (lowPowerMode ? 0 : value);
+  const MAX_RENDER_PIXELS = 1400000; // pixel budget for touch devices so fullscreen does not blow up the fill rate
+  function targetPixelRatio(width, height) {
+    const cap = lowPowerMode ? 1.1 : 1.6;
+    let ratio = Math.min(window.devicePixelRatio || 1, cap);
+    if (lowPowerMode) ratio = Math.min(ratio, Math.sqrt(MAX_RENDER_PIXELS / Math.max(1, width * height)));
+    return Math.max(0.75, ratio);
+  }
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#B8D8C0');
   const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 80);
@@ -253,7 +263,7 @@
   camera.lookAt(cameraTarget);
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lowPowerMode ? 1.1 : 1.6));
+  renderer.setPixelRatio(targetPixelRatio(stage.clientWidth || 1, stage.clientHeight || 1));
   renderer.setSize(stage.clientWidth || 1, stage.clientHeight || 1, false);
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -321,9 +331,9 @@
   const sinkDrainCoupling = contextMesh(new THREE.CylinderGeometry(0.205, 0.205, 0.24, 32), drainMat, [-1.62, 2.48, 0]);
 
   const plastic = new THREE.MeshStandardMaterial({ color: '#f4f3ed', roughness: 0.32, metalness: 0.02 });
-  const glass = new THREE.MeshPhysicalMaterial({ color: '#8ab7cb', roughness: 0.28, metalness: 0.02, transparent: true, opacity: 0.42, side: THREE.DoubleSide, depthWrite: false, transmission: 0.01 });
+  const glass = new THREE.MeshPhysicalMaterial({ color: '#8ab7cb', roughness: 0.28, metalness: 0.02, transparent: true, opacity: 0.42, side: THREE.DoubleSide, depthWrite: false, transmission: transmissionAmount(0.01) });
   const pvc = new THREE.MeshPhysicalMaterial({ color: '#819aaa', roughness: 0.14, metalness: 0.06, transparent: true, opacity: 0.56, side: THREE.DoubleSide, depthWrite: false });
-  const waterMat = new THREE.MeshPhysicalMaterial({ color: '#034770', roughness: 0.2, transparent: true, opacity: 0.84, transmission: 0.01, side: THREE.DoubleSide, depthWrite: false });
+  const waterMat = new THREE.MeshPhysicalMaterial({ color: '#034770', roughness: 0.2, transparent: true, opacity: 0.84, transmission: transmissionAmount(0.01), side: THREE.DoubleSide, depthWrite: false });
   const oilMat = new THREE.MeshPhysicalMaterial({ color: '#e5a91d', roughness: 0.15, transparent: true, opacity: 0.94, metalness: 0.08, side: THREE.DoubleSide, depthWrite: false });
   const clothMat = new THREE.MeshStandardMaterial({ color: '#eee8df', roughness: 0.92, transparent: true, opacity: 0.73, side: THREE.DoubleSide, depthWrite: false });
   const fibreMat = new THREE.MeshStandardMaterial({ color: '#4f3d2b', roughness: 0.96 });
@@ -469,7 +479,7 @@
     false,
     'centripetal'
   );
-  const inletFlowMat = new THREE.MeshPhysicalMaterial({ color: '#034770', roughness: 0.12, transparent: true, opacity: 0, transmission: 0.04, side: THREE.DoubleSide, depthWrite: false });
+  const inletFlowMat = new THREE.MeshPhysicalMaterial({ color: '#034770', roughness: 0.12, transparent: true, opacity: 0, transmission: transmissionAmount(0.04), side: THREE.DoubleSide, depthWrite: false });
   const inletFlow = addMesh(inlet, new THREE.TubeGeometry(flowCurve, 64, 0.087, 16, false), inletFlowMat, 'inlet');
   inletFlow.visible = false;
   const tankFlowPoints = [[-0.63, 0.38, 0.08], [-0.47, 0.37, 0.08], [-0.29, 0.32, 0.08], [-0.12, 0.22, 0.08], [0.015, 0.075, 0.08], [0.075, -0.055, 0.08]];
@@ -504,7 +514,7 @@
     streamOilDrops.push(drop);
   }
   const outletFlowCurve = new THREE.CatmullRomCurve3(outletPoints.map((point) => new THREE.Vector3(point[0], point[1], point[2] + 0.035)), false, 'centripetal');
-  const outletFlowMat = new THREE.MeshPhysicalMaterial({ color: '#034770', roughness: 0.1, transparent: true, opacity: 0, transmission: 0.04, side: THREE.DoubleSide, depthWrite: false });
+  const outletFlowMat = new THREE.MeshPhysicalMaterial({ color: '#034770', roughness: 0.1, transparent: true, opacity: 0, transmission: transmissionAmount(0.04), side: THREE.DoubleSide, depthWrite: false });
   const outletFlow = addMesh(outlet, new THREE.TubeGeometry(outletFlowCurve, 48, 0.074, 14, false), outletFlowMat, 'outlet');
   outletFlow.visible = false;
   // Start the installed drain a little inside the outlet elbow so the two PVC runs overlap
@@ -520,7 +530,7 @@
   ], false, 'centripetal');
   const undergroundDrain = new THREE.Mesh(new THREE.TubeGeometry(undergroundDrainCurve, 24, 0.205, 16, false), drainMat);
   installContext.add(undergroundDrain);
-  const undergroundFlowMat = new THREE.MeshPhysicalMaterial({ color: '#034770', roughness: 0.1, transparent: true, opacity: 0, transmission: 0.04, side: THREE.DoubleSide, depthWrite: false });
+  const undergroundFlowMat = new THREE.MeshPhysicalMaterial({ color: '#034770', roughness: 0.1, transparent: true, opacity: 0, transmission: transmissionAmount(0.04), side: THREE.DoubleSide, depthWrite: false });
   const undergroundFlow = new THREE.Mesh(new THREE.TubeGeometry(installOutletCurve, 56, 0.074, 14, false), undergroundFlowMat);
   installContext.add(undergroundFlow);
   undergroundFlow.visible = false;
@@ -1041,15 +1051,26 @@
   });
   canvas.addEventListener('pointercancel', () => { pointerStart = null; if (autoRotate && rotationTween) rotationTween.resume(); });
 
-  function resizeRenderer() {
+  let lastW = 0, lastH = 0, lastRatio = 0, resizeQueued = false;
+  function applyResize() {
+    resizeQueued = false;
     if (!stage) return;
     const width = stage.clientWidth;
     const height = stage.clientHeight;
     if (!width || !height) return;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lowPowerMode ? 1.1 : 1.6));
+    const ratio = targetPixelRatio(width, height);
+    // fullscreenchange + ResizeObserver + window resize can all fire together; skip no-op resizes (each one reallocates the GL buffers)
+    if (width === lastW && height === lastH && ratio === lastRatio) return;
+    lastW = width; lastH = height; lastRatio = ratio;
+    renderer.setPixelRatio(ratio);
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
+  }
+  function resizeRenderer() {
+    if (resizeQueued) return;
+    resizeQueued = true;
+    requestAnimationFrame(applyResize);
   }
   const resizeObserver = new ResizeObserver(resizeRenderer);
   resizeObserver.observe(stage);
