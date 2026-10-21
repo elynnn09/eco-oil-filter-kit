@@ -832,6 +832,7 @@
       waterSurface.position.y = surfaceY;
       waterRipple.position.y = surfaceY + 0.012;
     };
+    timeline.addLabel('flowStart');
     timeline.call(() => {
       updateStatus('Water and oil enter through the upper PVC and flow down through the tank');
       water.visible = true;
@@ -895,6 +896,12 @@
     streamOilDrops.forEach((drop) => { drop.visible = false; });
     }, null, '<+=0.73');
     timeline.call(() => updateStatus('Running · Grease captured in the pack · Water draining underground'));
+    // Fullscreen guide cards: 01 water enters above, 02 grease is captured, 03 filtered water drains below.
+    const flowStartTime = timeline.labels.flowStart;
+    [flowStartTime + 1.6, flowStartTime + 4.8, flowStartTime + 12.6].forEach((time, index) => {
+      timeline.addLabel('introStep' + (index + 1), time);
+      timeline.call(() => document.dispatchEvent(new CustomEvent('eco-oil:intro-sync', { detail: { index } })), null, time);
+    });
   }
 
   function animateReplacement() {
@@ -995,6 +1002,15 @@
     replaced = false;
     animateAssembly();
   });
+  function jumpToIntroStep(index) {
+    const i = Math.max(0, Math.min(2, index | 0));
+    assembled = false;
+    replaced = false;
+    animateAssembly();
+    const mark = assemblyTimeline.labels['introStep' + (i + 1)];
+    if (mark != null) assemblyTimeline.seek(mark + 0.05, false); // false = still run the state-changing callbacks on the way
+  }
+  document.addEventListener('eco-oil:intro-step', (event) => jumpToIntroStep((event.detail && event.detail.index) || 0));
   $('replaceButton').addEventListener('click', animateReplacement);
   $('backButton').addEventListener('click', (event) => {
     event.preventDefault();
@@ -1217,6 +1233,10 @@
     frameTimeSum = 0; frameTimeCount = 0; lastRenderTime = 0;
     resizeRenderer();
     startRender();
+    if (stageIsFullscreen() && !(replaceTimeline && replaceTimeline.isActive())) {
+      const t = assemblyTimeline;
+      if (!t || t.labels.flowStart == null || t.time() < t.labels.flowStart) jumpToIntroStep(0);
+    }
   }
   document.addEventListener('fullscreenchange', onStageFullscreenChange);
   document.addEventListener('webkitfullscreenchange', onStageFullscreenChange);
