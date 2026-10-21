@@ -10,13 +10,13 @@
   }
 
   const parts = {
-    chamber: { name: 'Clear filter chamber', material: 'Transparent food-grade PETG', purpose: 'Houses the water, floating oil layer, and removable material pack.' },
-    topcap: { name: 'Removable top cap', material: 'Food-grade polypropylene (PP)', purpose: 'Opens for access to the material pack.' },
-    bottomcap: { name: 'Fixed bottom cap', material: 'Food-grade polypropylene (PP)', purpose: 'Seals the base of the filter chamber.' },
-    inlet: { name: 'PVC inlet elbow', material: 'Clear rigid PVC', purpose: 'Carries water into the chamber.' },
-    outlet: { name: 'PVC outlet elbow', material: 'Clear rigid PVC', purpose: 'Routes filtered water out to the drain.' },
-    pack: { name: 'Material pack', material: 'Cotton filter bag with coconut fibre and biochar', purpose: 'Holds the two natural filter media layers; replace after two weeks.' },
-    cups: { name: 'Kitchen filter net cups', material: 'Fine nylon mesh with a polypropylene rim', purpose: 'Reusable cups shown in the kit box.' }
+    chamber: { name: 'Clear filter chamber', material: 'UPVC Pipe', purpose: 'Houses the water, floating oil layer, and removable material pack, allowing users to observe the separation of floating oil and water during filtration.' },
+    topcap: { name: 'Removable top cap', material: 'PVC Internal Threaded Pipe Cap', purpose: 'Covers the chamber and can be removed to access and replace the filter pack.' },
+    bottomcap: { name: 'Fixed bottom cap', material: 'PVC Pipe Cap', purpose: 'Seals the base of the filter chamber to help prevent leakage.' },
+    inlet: { name: 'PVC inlet elbow', material: 'PVC L-Shaped Connector', purpose: 'Directs wastewater into the filter chamber.' },
+    outlet: { name: 'PVC outlet elbow', material: 'PVC', purpose: 'Directs filtered water out of the chamber to the drain.' },
+    pack: { name: 'Material pack', material: 'Cotton filter bag containing coconut fibre and biochar', purpose: 'Holds the filter media in place: Coconut fibre helps trap some oil and suspended residues, while biochar may adsorb certain contaminants; replace after two weeks.' },
+    cups: { name: 'Kitchen filter net', material: 'Fine Nylon Mesh with a Polypropylene Rim', purpose: 'Traps food scraps and other solid waste at the sink hole cover.' }
   };
   // Hit areas are defined against the source photo, then mapped into the
   // actual object-fit:contain image bounds at every viewport size.
